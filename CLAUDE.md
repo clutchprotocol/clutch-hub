@@ -19,8 +19,10 @@ Only four source files — the SDK is deliberately small:
   `Signature`, …).
 - `src/index.ts` — barrel re-exports. New public symbols must be reachable from here.
 
-There is no test suite. `test_rlp_fix.{js,mjs}` are ad-hoc manual scripts run against `dist/` after
-`npm run build` — not wired into CI.
+Tests live in `test/*.test.mjs` and use Node's built-in runner (`npm test` → `node --test test/`),
+no framework. They import from `dist/`, so `npm run build` first; the release workflow runs them
+after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` at the
+repo root are older ad-hoc manual scripts, not part of `npm test`.
 
 ## Transaction Lifecycle (client side)
 
@@ -44,7 +46,11 @@ legacy JSON-string quoting); empty referrer encodes as `''`.
 
 ## Public API Surface (`ClutchHubSdk`)
 
-- **Constructor / identity**: `new ClutchHubSdk(apiUrl, publicKey, privateKey?)`, `getPublicKey()`,
+- **Constructor / identity**: `new ClutchHubSdk(apiUrl, publicKey, privateKey?, chainId?, options?)`
+  where `options.timeoutMs` bounds every hub HTTP request (default `DEFAULT_HTTP_TIMEOUT_MS`,
+  30 s; `0` disables). Hash arguments to `listRideOffers`/`subscribeRideOffers` go through
+  `normalizeTxHashForQuery` (strip `0x`, lowercase) because the hub matches them as exact
+  strings. `getPublicKey()`,
   `setPrivateKey(privateKey)`, `isAuthenticated()`. The private key (constructor arg or
   `setPrivateKey`) is required for token issuance — `generateToken` demands a signed
   proof-of-key-ownership challenge. It is kept in a module-global map keyed by publicKey

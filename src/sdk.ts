@@ -56,6 +56,30 @@ export function normalizeTxHashForRlp(hex: string): string {
   return stripHexPrefix(s);
 }
 
+/**
+ * The hub stores transaction hashes as 64 lowercase hex characters with no `0x`, and its
+ * hash-taking query arguments (`listRideOffers`, `rideOffersUpdated`) match as exact strings.
+ * A hash as returned by `signTransaction` (`0x…`) therefore has to be normalized before it
+ * can be queried with, or the hub answers with an empty list.
+ */
+function normalizeTxHashForQuery(hex: string): string {
+  return normalizeTxHashForRlp(hex).toLowerCase();
+}
+
+/** Default timeout for every HTTP request the SDK makes to the hub, in milliseconds. */
+export const DEFAULT_HTTP_TIMEOUT_MS = 30_000;
+
+/** Optional settings for {@link ClutchHubSdk}. */
+export interface ClutchHubSdkOptions {
+  /**
+   * HTTP timeout for every hub request (queries, mutations, `generateToken`), in milliseconds.
+   * Defaults to {@link DEFAULT_HTTP_TIMEOUT_MS}. `0` disables it, which is what the SDK did
+   * before this option existed: a request the hub never answered hung the caller forever.
+   * Subscriptions ride on graphql-ws and are unaffected.
+   */
+  timeoutMs?: number;
+}
+
 // Expose Buffer to browser contexts
 declare global {
   interface Window { Buffer: typeof Buffer }
@@ -412,9 +436,20 @@ export class ClutchHubSdk {
    *   it is defeats the check chain_id exists to provide. If omitted, `signTransaction` still
    *   verifies every other `expected` field but skips the chain_id pin (nothing was pinned to
    *   check against) rather than failing every real transaction against a phantom "chain 0".
+   * @param options Optional settings — see {@link ClutchHubSdkOptions}. Today that is the HTTP
+   *   timeout (`timeoutMs`, default {@link DEFAULT_HTTP_TIMEOUT_MS}).
    */
-  constructor(apiUrl: string, publicKey: string, privateKey?: string, chainId?: number) {
-    this.apiClient = axios.create({ baseURL: apiUrl });
+  constructor(
+    apiUrl: string,
+    publicKey: string,
+    privateKey?: string,
+    chainId?: number,
+    options: ClutchHubSdkOptions = {}
+  ) {
+    this.apiClient = axios.create({
+      baseURL: apiUrl,
+      timeout: options.timeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS,
+    });
     this.publicKey = publicKey;
     this.chainId = chainId ?? 0;
     this.chainIdConfigured = chainId !== undefined;
@@ -883,7 +918,7 @@ export class ClutchHubSdk {
     `;
     return this.subscribeGraphqlListField<AvailableRideOffer>(
       query,
-      { rideRequestTxHash },
+      { rideRequestTxHash: normalizeTxHashForQuery(rideRequestTxHash) },
       'rideOffersUpdated',
       handlers
     );
@@ -1000,7 +1035,7 @@ export class ClutchHubSdk {
     `;
     const result = await this.executeGraphQL<{
       listRideOffers: (Omit<AvailableRideOffer, 'fare'> & { fare: string })[];
-    }>(query, { rideRequestTxHash });
+    }>(query, { rideRequestTxHash: normalizeTxHashForQuery(rideRequestTxHash) });
     return result.listRideOffers.map((r) => ({ ...r, fare: BigInt(r.fare) }));
   }
 
