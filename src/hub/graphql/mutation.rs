@@ -6,6 +6,7 @@ use crate::hub::{
     clutch_node_client::{ChainInfo, ClutchNodeClient},
     configuration::AppConfig,
     graphql::types::{get_auth_user, parse_clt_amount, AuthGuard, AuthSignatureInput, TokenResponse},
+    ratelimit::TokenRateLimiter,
     referrer::configured_referrer,
 };
 use async_graphql::{Context, Json, Object};
@@ -49,6 +50,19 @@ impl Mutation {
         let config = ctx
             .data::<AppConfig>()
             .map_err(|_| async_graphql::Error::new("Failed to get app config"))?;
+
+        // FIRST, before any cryptography. This is the only mutation not behind `AuthGuard`, so
+        // it is the only one that does signature recovery before it knows whether the caller is
+        // anybody — which makes an unauthenticated flood of junk signatures a CPU amplifier.
+        // A refusal here has to cost nothing, so nothing expensive may move above this.
+        let limiter = ctx
+            .data::<Arc<TokenRateLimiter>>()
+            .map_err(|_| async_graphql::Error::new("Failed to get token rate limiter"))?;
+        if let Err(limit) = limiter.check(&public_key) {
+            info!("generateToken refused by rate limit ({:?}) for {}", limit, public_key);
+            return Err(async_graphql::Error::new(limit.message()));
+        }
+
         let chain_id = require_chain_id(ctx)?;
 
         let now_secs = SystemTime::now()
@@ -455,5 +469,92 @@ impl Mutation {
 
         // Return the result as JSON
         Ok(Json(result))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::hub::graphql::build_schema;
+
+    fn test_config(token_rate_limit_per_minute: u32) -> AppConfig {
+        AppConfig {
+            log_level: "info".into(),
+            serve_metric_addr: "127.0.0.1:0".into(),
+            seq_url: String::new(),
+            seq_api_key: String::new(),
+            // Deliberately unreachable: generateToken never touches the node, and a test that
+            // needed one would be testing something else.
+            clutch_node_ws_url: "ws://127.0.0.1:1/ws".into(),
+            ws_addr: "127.0.0.1:0".into(),
+            jwt_secret: "iP8BoK3dJfTQGz5UyXq9NwL7e0vCmAhR6S2YxE1ZpDt4".into(),
+            jwt_expiration_hours: 1,
+            allowed_origins: "*".into(),
+            default_ride_request_referrer: String::new(),
+            default_ride_offer_referrer: String::new(),
+            token_rate_limit_per_minute,
+            token_rate_limit_global_per_minute: 1_000,
+        }
+    }
+
+    fn test_chain_info() -> Arc<ChainInfo> {
+        Arc::new(ChainInfo {
+            chain_id: 2077,
+            is_testnet: true,
+            tx_fee: 1_000,
+            total_supply: 0,
+            mint_authority: "0x0000000000000000000000000000000000000000".into(),
+        })
+    }
+
+    /// The limiter must run BEFORE `generateToken` verifies anything, which is the entire reason
+    /// it exists: a refusal has to cost no signature recovery.
+    ///
+    /// Both calls below carry a junk signature, so the first gets as far as verification and
+    /// fails there, while the second — already over the limit — must fail with the limiter's
+    /// message instead. Comparing the two messages is what pins the ordering; asserting only
+    /// that both failed would pass even if the limiter were never consulted.
+    ///
+    /// It also pins the sharing: the schema is cloned per request, so a limiter held by value
+    /// would give each execution an empty map and enforce nothing, with every unit test in
+    /// `ratelimit` still green.
+    #[tokio::test]
+    async fn generate_token_is_rate_limited_before_verifying_anything() {
+        let schema = build_schema(
+            ClutchNodeClient::new("ws://127.0.0.1:1/ws".to_string()),
+            test_config(1),
+            test_chain_info(),
+        );
+
+        let request = r#"mutation {
+            generateToken(
+                publicKey: "0x4196c526e2bb5dd02c2e2613b43291b0736afc47",
+                timestamp: 1,
+                signature: { r: "0x00", s: "0x00", v: 27 }
+            ) { token expiresAt }
+        }"#;
+
+        let first = schema.execute(request).await;
+        let second = schema.execute(request).await;
+
+        let first_err = first
+            .errors
+            .first()
+            .map(|e| e.message.clone())
+            .expect("a junk signature must be rejected");
+        let second_err = second
+            .errors
+            .first()
+            .map(|e| e.message.clone())
+            .expect("a request over the limit must be rejected");
+
+        assert!(
+            first_err.contains("Proof of key ownership failed"),
+            "the first call must reach verification, got: {first_err}"
+        );
+        assert!(
+            second_err.contains("Too many token requests"),
+            "the second call must be refused by the limiter, got: {second_err}"
+        );
     }
 }
