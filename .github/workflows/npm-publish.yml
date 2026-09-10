@@ -46,6 +46,9 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Test (against dist/)
+        run: npm test
+
       - name: Run semantic-release
         id: semantic-release
         run: |

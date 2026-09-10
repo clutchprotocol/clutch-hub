@@ -56,6 +56,16 @@ export function normalizeTxHashForRlp(hex: string): string {
   return stripHexPrefix(s);
 }
 
+/**
+ * The hub stores transaction hashes as 64 lowercase hex characters with no `0x`, and its
+ * hash-taking query arguments (`listRideOffers`, `rideOffersUpdated`) match as exact strings.
+ * A hash as returned by `signTransaction` (`0x…`) therefore has to be normalized before it
+ * can be queried with, or the hub answers with an empty list.
+ */
+function normalizeTxHashForQuery(hex: string): string {
+  return normalizeTxHashForRlp(hex).toLowerCase();
+}
+
 // Expose Buffer to browser contexts
 declare global {
   interface Window { Buffer: typeof Buffer }
@@ -883,7 +893,7 @@ export class ClutchHubSdk {
     `;
     return this.subscribeGraphqlListField<AvailableRideOffer>(
       query,
-      { rideRequestTxHash },
+      { rideRequestTxHash: normalizeTxHashForQuery(rideRequestTxHash) },
       'rideOffersUpdated',
       handlers
     );
@@ -1000,7 +1010,7 @@ export class ClutchHubSdk {
     `;
     const result = await this.executeGraphQL<{
       listRideOffers: (Omit<AvailableRideOffer, 'fare'> & { fare: string })[];
-    }>(query, { rideRequestTxHash });
+    }>(query, { rideRequestTxHash: normalizeTxHashForQuery(rideRequestTxHash) });
     return result.listRideOffers.map((r) => ({ ...r, fare: BigInt(r.fare) }));
   }
 
