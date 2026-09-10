@@ -1,3 +1,15 @@
+## [4.1.0](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v4.0.0...v4.1.0) (2026-09-10)
+
+
+### Features
+
+* bound every hub HTTP request with a timeout ([bdd1b3d](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/bdd1b3dae5f9335c7acd6b0cc2c9bfa3df836809))
+
+
+### Bug Fixes
+
+* normalize hash arguments before querying the hub for offers ([1cd0dfd](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/1cd0dfd63616b3ee7554770ec644cce1c6a711fb))
+
 ## [4.0.0](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v3.0.0...v4.0.0) (2026-09-04)
 
 
