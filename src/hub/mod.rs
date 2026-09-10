@@ -3,6 +3,7 @@ pub mod clutch_node_client;
 pub mod configuration;
 pub mod graphql;
 pub mod metric;
+pub mod ratelimit;
 pub mod referrer;
 pub mod seq;
 pub mod server;

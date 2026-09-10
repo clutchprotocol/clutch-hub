@@ -27,6 +27,29 @@ pub struct AppConfig {
     /// Default referrer address for RideOffer when the client omits `referrer` (empty = none).
     #[serde(default)]
     pub default_ride_offer_referrer: String,
+    /// `generateToken` requests per minute for one claimed `publicKey`.
+    ///
+    /// Catches a client stuck in a retry loop, and stops one caller eating the whole global
+    /// allowance below. Ten is far above the SDK's behaviour: it caches JWTs per public key with
+    /// a 30-second expiry buffer and dedupes in-flight requests, so a healthy client asks about
+    /// once per token lifetime.
+    #[serde(default = "default_token_rate_limit_per_minute")]
+    pub token_rate_limit_per_minute: u32,
+    /// `generateToken` requests per minute across all callers.
+    ///
+    /// This is the bound that actually matters. `publicKey` is a caller-supplied string, so the
+    /// per-key limit above is bypassed by varying it; only a global cap bounds how much
+    /// signature recovery an unauthenticated flood can force. See `hub::ratelimit`.
+    #[serde(default = "default_token_rate_limit_global_per_minute")]
+    pub token_rate_limit_global_per_minute: u32,
+}
+
+fn default_token_rate_limit_per_minute() -> u32 {
+    10
+}
+
+fn default_token_rate_limit_global_per_minute() -> u32 {
+    120
 }
 
 // Hand-written so secrets never get dumped into logs/Seq via the startup info! below.
