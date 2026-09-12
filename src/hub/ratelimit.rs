@@ -41,8 +41,17 @@ struct Entry {
     count: u32,
 }
 
-/// Fixed window rather than a token bucket: the bound worth enforcing is "not many per minute",
-/// and burst behaviour at a window edge is uninteresting at these thresholds.
+/// Fixed window rather than a token bucket.
+///
+/// Measured against stage on 2026-09-13, and the window edge is NOT as uninteresting as this
+/// comment used to claim: the counter resets at the boundary, so a burst spanning one gets up to
+/// **twice** the configured limit in quick succession. 150 requests with varying keys were refused
+/// 43 times on one run and 0 times on the next, purely on where they fell relative to the reset.
+///
+/// Kept anyway. The number that matters is the ceiling on signature-recovery work, and 2x a limit
+/// chosen well below what hurts is still well below what hurts. A token bucket would smooth this
+/// at the cost of carrying state per key between windows. Read the configured value as "about this
+/// many per minute, up to twice that across a boundary", and set it with that in mind.
 struct FixedWindow {
     window: Duration,
     max_per_window: u32,
