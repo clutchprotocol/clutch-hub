@@ -29,7 +29,6 @@ function App() {
   const [activeTab, setActiveTab] = useState(initialStoredRole || null);
   /** Sub-view when activeTab === 'hub' */
   const [hubSubTab, setHubSubTab] = useState('about');
-  const themeStorageKey = 'clutch_demo_theme';
 
   const [userProfile, setUserProfile] = useState({ publicKey: '', privateKey: '' });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -40,26 +39,6 @@ function App() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
 
-  const initialTheme = useMemo(() => {
-    if (typeof window === 'undefined') return 'dark';
-    const stored = window.localStorage.getItem(themeStorageKey);
-    if (stored === 'light' || stored === 'dark') return stored;
-    // Respect OS preference as default
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
-    return prefersDark ? 'dark' : 'light';
-  }, []);
-
-  const [theme, setTheme] = useState(initialTheme);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(themeStorageKey, theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  };
 
   const handleCopyWalletAddress = async () => {
     if (!userProfile.publicKey) return;
@@ -409,9 +388,6 @@ function App() {
                     Back up wallet
                   </button>
                 )}
-                <button type="button" className="btn-secondary" onClick={toggleTheme}>
-                  {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                </button>
                 <button
                   type="button"
                   className="btn-secondary app-menu-signout-btn"

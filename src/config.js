@@ -135,11 +135,6 @@ const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright
 export const MAP_TILE_URL = CARTO_API_KEY
   ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${CARTO_API_KEY}`
   : OSM_TILE_URL;
-export const MAP_TILE_URL_DARK = CARTO_API_KEY
-  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${CARTO_API_KEY}`
-  : OSM_TILE_URL;
 export const MAP_ATTRIBUTION = CARTO_API_KEY
   ? `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`
   : OSM_ATTRIBUTION;
-
-export const getMapTileUrl = (theme) => (theme === "dark" ? MAP_TILE_URL_DARK : MAP_TILE_URL);

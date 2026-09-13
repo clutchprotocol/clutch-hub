@@ -2,8 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import MapFitBounds from './MapFitBounds';
 import { ClutchHubSdk, verifyUnsignedTransaction } from 'clutch-hub-sdk-js';
-import { API_URL, CHAIN_ID, MAP_ATTRIBUTION, getMapTileUrl } from '../config';
-import { useTheme } from '../hooks/useTheme';
+import { API_URL, CHAIN_ID, MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import TransactionHistory from './TransactionHistory';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { useConfirmDialog } from './layout/useConfirmDialog.jsx';
@@ -39,8 +38,6 @@ function CopyableAddress({ address }) {
 }
 
 const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
-  const theme = useTheme();
-  const tileUrl = getMapTileUrl(theme);
   const farePaid = BigInt(trip.farePaid ?? trip.fare_paid ?? 0);
   const totalFare = BigInt(trip.fare);
   const remaining = totalFare > farePaid ? totalFare - farePaid : 0n;
@@ -245,7 +242,7 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
       <div className="map-wrapper" style={{ marginBottom: '1rem' }}>
         <MapLegend style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', zIndex: 700 }} />
         <MapContainer center={pickup} zoom={13} style={{ height: 'clamp(120px, 18vh, 160px)', width: '100%' }}>
-          <TileLayer key={tileUrl} url={tileUrl} attribution={MAP_ATTRIBUTION} />
+          <TileLayer url={MAP_TILE_URL} attribution={MAP_ATTRIBUTION} />
           <MapFitBounds positions={[pickup, dropoff]} />
           <Marker position={pickup} icon={pickupIcon}>
             <Popup>Pickup</Popup>

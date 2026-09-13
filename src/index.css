@@ -7,28 +7,28 @@
   --font-sans: var(--font-body);
 
   /* Kinetic Precision – Dark theme */
-  --surface: #060e20;
-  --surface-dim: #060e20;
-  --background: #060e20;
-  --surface-container-lowest: #000000;
-  --surface-container-low: #091328;
-  --surface-container: #0f1930;
-  --surface-container-high: #141f38;
-  --surface-container-highest: #192540;
-  --surface-bright: #1f2b49;
-  --surface-variant: #192540;
+  --surface: #ffffff;
+  --surface-dim: #ffffff;
+  --background: #f7f9ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef2ff;
+  --surface-container: #e8efff;
+  --surface-container-high: #dde6ff;
+  --surface-container-highest: #d3dcff;
+  --surface-bright: #cbd6ff;
+  --surface-variant: #e6ecff;
 
   /* Legacy aliases for components */
-  --bg-base: #060e20;
-  --bg-surface: #091328;
-  --bg-card: #0f1930;
-  --bg-elevated: #141f38;
-  --bg-highest: #192540;
+  --bg-base: #f7f9ff;
+  --bg-surface: #eef2ff;
+  --bg-card: #e8efff;
+  --bg-elevated: #dde6ff;
+  --bg-highest: #d3dcff;
 
-  --outline: #6d758c;
-  --outline-variant: #40485d;
-  --border: rgba(109, 117, 140, 0.2);
-  --border-subtle: rgba(64, 72, 93, 0.5);
+  --outline: #5f6a86;
+  --outline-variant: #aab3c7;
+  --border: rgba(95, 106, 134, 0.18);
+  --border-subtle: rgba(95, 106, 134, 0.35);
 
   /* Primary – The Pulse */
   --primary: #8cacff;
@@ -43,22 +43,22 @@
   --on-primary-container: #ffffff;
 
   /* Text */
-  --on-surface: #dee5ff;
-  --on-background: #dee5ff;
-  --on-surface-variant: #a3aac4;
-  --text-primary: #dee5ff;
-  --text-secondary: #a3aac4;
-  --text-muted: #6d758c;
-  --text-inverse: #ffffff;
+  --on-surface: #0b1220;
+  --on-background: #0b1220;
+  --on-surface-variant: #3f4a63;
+  --text-primary: #0b1220;
+  --text-secondary: #3f4a63;
+  --text-muted: #6a728a;
+  --text-inverse: #0b1220;
 
   /* Secondary */
-  --secondary: #d8e3fb;
-  --secondary-dim: #cad5ed;
-  --secondary-container: #3c475a;
-  --secondary-fixed: #d8e3fb;
-  --secondary-fixed-dim: #cad5ed;
-  --on-secondary: #475266;
-  --on-secondary-container: #c5d1e8;
+  --secondary: #dbe6ff;
+  --secondary-dim: #c9d6ff;
+  --secondary-container: #a8b5d8;
+  --secondary-fixed: #dbe6ff;
+  --secondary-fixed-dim: #c9d6ff;
+  --on-secondary: #263141;
+  --on-secondary-container: #0b1220;
 
   /* Tertiary */
   --tertiary: #ffb7f9;
@@ -95,79 +95,14 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.45);
-
-  --transition: 0.2s ease;
-  --transition-slow: 0.3s ease;
-
-  /* Theme helpers (used by App.css) */
-  --glass-bg: rgba(25, 37, 64, 0.6);
-  --glass-bg-strong: rgba(25, 37, 64, 0.9);
-  --leaflet-container-bg: #0f1930;
-  --leaflet-attribution-bg: rgba(9, 19, 40, 0.92);
-  --map-gradient-overlay-start: rgba(6, 14, 32, 0.2);
-  --map-gradient-overlay-mid: rgba(6, 14, 32, 0.25);
-}
-
-/* Light theme (overrides Kinetic Precision tokens) */
-:root[data-theme='light'] {
-  /* Background / surfaces */
-  --surface: #ffffff;
-  --surface-dim: #ffffff;
-  --background: #f7f9ff;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #eef2ff;
-  --surface-container: #e8efff;
-  --surface-container-high: #dde6ff;
-  --surface-container-highest: #d3dcff;
-  --surface-bright: #cbd6ff;
-  --surface-variant: #e6ecff;
-
-  /* Legacy aliases */
-  --bg-base: #f7f9ff;
-  --bg-surface: #eef2ff;
-  --bg-card: #e8efff;
-  --bg-elevated: #dde6ff;
-  --bg-highest: #d3dcff;
-
-  /* Border / outline */
-  --outline: #5f6a86;
-  --outline-variant: #aab3c7;
-  --border: rgba(95, 106, 134, 0.18);
-  --border-subtle: rgba(95, 106, 134, 0.35);
-
-  /* Text */
-  --on-surface: #0b1220;
-  --on-background: #0b1220;
-  --on-surface-variant: #3f4a63;
-  --text-primary: #0b1220;
-  --text-secondary: #3f4a63;
-  --text-muted: #6a728a;
-  --text-inverse: #0b1220;
-
-  /* Secondary */
-  --secondary: #dbe6ff;
-  --secondary-dim: #c9d6ff;
-  --secondary-container: #a8b5d8;
-  --secondary-fixed: #dbe6ff;
-  --secondary-fixed-dim: #c9d6ff;
-  --on-secondary: #263141;
-  --on-secondary-container: #0b1220;
-
-  /* Keep primary/accent colors */
-  --on-primary-fixed: #000000;
-  --on-primary-container: #ffffff;
-
-  /* Shadows (lighter) */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.22);
+
+  --transition: 0.2s ease;
+  --transition-slow: 0.3s ease;
 
   /* Theme helpers (used by App.css) */
   --glass-bg: rgba(255, 255, 255, 0.72);
@@ -177,7 +112,6 @@
   --map-gradient-overlay-start: rgba(6, 14, 32, 0.12);
   --map-gradient-overlay-mid: rgba(6, 14, 32, 0.18);
 }
-
 * {
   box-sizing: border-box;
 }
