@@ -11,6 +11,7 @@ import DepositPanel from './components/DepositPanel';
 import WithdrawPanel from './components/WithdrawPanel';
 import { OverlayPanel } from './components/layout';
 import { WalletBackupExport } from './components/WalletBackup';
+import UpdatePrompt from './components/UpdatePrompt';
 import { truncAddr } from './utils/address';
 import './App.css';
 
@@ -240,6 +241,8 @@ function App() {
           open={withdrawOpen}
         />
       </OverlayPanel>
+
+      <UpdatePrompt />
 
       <OverlayPanel
         open={backupOpen}

@@ -12,7 +12,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt', not 'autoUpdate'. autoUpdate reloads the page the instant a new build
+      // activates, which here can mean losing a half-entered fare or a pickup pin. See
+      // src/pwaUpdate.js -- the user is told and picks the moment.
+      registerType: 'prompt',
       includeManifestIcons: false,
       // Important: make the PWA assets available in dev mode too.
       // Without this, /sw.js and /registerSW.js fall back to index.html.
