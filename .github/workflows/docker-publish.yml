@@ -61,15 +61,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # --ignore-scripts because installing the SDK as a file: dependency runs its `prepare`,
-      # which runs `tsc`, which fails here on options a newer TypeScript has removed
-      # (moduleResolution=node10). The image build compiles the SDK from its own lockfile and is
-      # unaffected, so this is a fragility in a fresh resolution rather than a live break -- but
-      # nothing under test imports the SDK, so building it to run these tests buys nothing and
-      # couples them to another repo's toolchain.
+      # The SDK first, from ITS own lockfile -- the same order the Dockerfile uses, and not
+      # optional. Installing the demo app runs the SDK's `prepare` as a file: dependency, and
+      # `--ignore-scripts` does not stop that. Without the SDK's own node_modules already in place
+      # that build resolves a fresh TypeScript major and dies on options it has removed, which is a
+      # failure of this job rather than of the SDK.
+      - name: Build the SDK, as the image does
+        working-directory: build-context/clutch-hub-sdk-js
+        run: npm ci && npm run build
       - name: Install
         working-directory: build-context/clutch-hub-demo-app
-        run: npm ci --ignore-scripts
+        run: npm ci
       - name: Test
         working-directory: build-context/clutch-hub-demo-app
         run: npm test
