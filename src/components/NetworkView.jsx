@@ -9,8 +9,7 @@ import L from 'leaflet';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
-import { API_URL, MAP_ATTRIBUTION, getMapTileUrl } from '../config';
-import { useTheme } from '../hooks/useTheme';
+import { API_URL, MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import { useClutchSdk } from '../hooks/useClutchSdk';
 import { truncAddr } from '../utils/address';
 import { formatUsd } from '../utils/money';
@@ -29,8 +28,6 @@ const DEFAULT_CENTER = [27.1883, 56.3772];
 const DEFAULT_ZOOM = 12;
 
 const NetworkView = () => {
-  const theme = useTheme();
-  const tileUrl = getMapTileUrl(theme);
   const [activeTab, setActiveTab] = useState('requests');
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -187,7 +184,7 @@ const NetworkView = () => {
               <div className="map-wrapper network-map-wrapper">
                 <div className="map-gradient-overlay" />
                 <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} className="network-map" style={{ width: '100%' }}>
-                  <TileLayer key={tileUrl} url={tileUrl} attribution={MAP_ATTRIBUTION} />
+                  <TileLayer url={MAP_TILE_URL} attribution={MAP_ATTRIBUTION} />
                   <MapFitBounds
                     positions={
                       selectedTxHash && selectedRequest

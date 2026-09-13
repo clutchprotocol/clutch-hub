@@ -9,9 +9,8 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { verifyUnsignedTransaction } from 'clutch-hub-sdk-js';
-import { MAP_ATTRIBUTION, getMapTileUrl } from '../config';
+import { MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import { useClutchSdk } from '../hooks/useClutchSdk';
-import { useTheme } from '../hooks/useTheme';
 import { parseUsdToClt } from '../utils/money';
 import {
   subscribeActiveTripsCompat,
@@ -61,9 +60,6 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
   const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
 
   const hubSdk = useClutchSdk(userProfile.publicKey, '0x0', userProfile.privateKey);
-
-  const theme = useTheme();
-  const tileUrl = getMapTileUrl(theme);
 
   const hasConcurrent = activeTrips.length > 0 || previousRequests.length > 0;
   const hasActiveTrip = activeTrips.length > 0;
@@ -397,7 +393,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
             zoomControl={false}
             style={{ height: '100%', width: '100%' }}
           >
-            <TileLayer key={tileUrl} url={tileUrl} attribution={MAP_ATTRIBUTION} />
+            <TileLayer url={MAP_TILE_URL} attribution={MAP_ATTRIBUTION} />
             <MapCenterTracker onCenterChange={setMapCenter} />
 
             {previousRequests.map((r) => (

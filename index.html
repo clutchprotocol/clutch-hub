@@ -7,10 +7,11 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Clutch - Decentralized ride-sharing demo. Select pickup and dropoff on the map and submit ride requests via the Clutch Hub SDK." />
-    <meta name="theme-color" content="#060e20" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9ff" />
+    <!-- One theme, so one theme-color. The dark value and its prefers-color-scheme pair went with
+         the theme toggle; leaving them would paint the browser chrome dark around a light page. -->
+    <meta name="theme-color" content="#f7f9ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="apple-touch-icon" href="/clutch-logo.svg" />
     <title>Clutch</title>
   </head>

@@ -268,15 +268,27 @@ body {
   color: var(--text-muted);
 }
 
+/* A stack, not a row. As a non-wrapping flex row these buttons divided the drawer width between
+   them, so "Top up with USDT" arrived as four stacked words in a column narrower than its own
+   label. That degrades with every button added, and it did: the fifth was the last straw.
+   One column, full width, ordered by how often they are used. */
 .app-menu-actions {
   margin-top: 0.75rem;
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.app-menu-actions > button {
+  width: 100%;
+  justify-content: center;
+  /* Labels stay on one line -- wrapping is what made the old row unreadable. */
+  white-space: nowrap;
 }
 
 .app-menu-signout-btn {
-  font-size: 0.78rem;
-  padding: 0.42rem 0.85rem;
+  /* Set apart from the actions above it: leaving is not the same kind of thing as topping up. */
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
 }
 
 .app--entry {

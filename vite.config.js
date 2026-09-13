@@ -32,8 +32,10 @@ export default defineConfig({
         display_override: ['standalone', 'browser'],
         orientation: 'portrait',
         prefer_related_applications: false,
-        background_color: '#060e20',
-        theme_color: '#060e20',
+        // The light palette's background. These were the dark theme's, which survived the toggle's
+        // removal and would have shown a dark splash before a light app.
+        background_color: '#f7f9ff',
+        theme_color: '#f7f9ff',
         icons: [
           {
             src: '/favicon.ico',
