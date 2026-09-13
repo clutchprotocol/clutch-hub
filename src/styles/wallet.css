@@ -1,0 +1,109 @@
+/* ===== Wallet bar ===== */
+.wallet-bar {
+  margin-bottom: 1.5rem;
+}
+
+.wallet-bar .card {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
+}
+
+.wallet-connected {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wallet-address {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0.35rem 0.65rem;
+  background: var(--surface-container-high);
+  border-radius: var(--radius);
+  transition: background var(--transition);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  border: none;
+}
+
+.deposit-address {
+  /* Deliberately NOT .wallet-address: that one is a 140px chip with an ellipsis, which is right
+     for showing someone their own address and wrong for one they are about to send money to.
+     An address you cannot read in full is an address you cannot check against what you pasted. */
+  display: block;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-container-high);
+  border-radius: var(--radius);
+  transition: background var(--transition);
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  user-select: all;
+}
+
+.deposit-address:hover {
+  background: var(--surface-container-highest);
+}
+
+/* Withdraw (redemption) panel — see components/WithdrawPanel.jsx. The payout address and the
+   redemption reference reuse .deposit-address above, for the same reason it exists: a value that
+   has to be checked or pasted must be readable in full. */
+.redeem-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--outline-variant);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.redeem-row-label {
+  color: var(--text-secondary);
+}
+
+.redeem-status {
+  font-weight: 600;
+}
+
+.redeem-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0.6rem 0 0;
+}
+
+.wallet-address:hover {
+  background: var(--surface-container-highest);
+}
+
+.wallet-balance {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wallet-balance-unit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 0.2rem;
+}
+
