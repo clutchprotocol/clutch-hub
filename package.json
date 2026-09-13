@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test src/",
     "preview": "vite preview",
     "update:sdk": "npm update clutch-hub-sdk-js",
     "check:sdk": "npm list clutch-hub-sdk-js"

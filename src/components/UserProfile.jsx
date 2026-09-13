@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { generateWallet } from '../utils/wallet';
+import { WalletBackupRestore } from './WalletBackup';
 
 const STORAGE_KEYS = {
   passenger: { publicKey: 'clutch_passenger_publicKey', privateKey: 'clutch_passenger_privateKey' },
@@ -17,6 +18,7 @@ const UserProfile = ({ role = 'passenger', onProfileUpdate }) => {
   const [rememberKeys, setRememberKeys] = useState(false);
   const [isProfileSaved, setIsProfileSaved] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showRestore, setShowRestore] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const keys = STORAGE_KEYS[role] || STORAGE_KEYS.passenger;
@@ -70,12 +72,29 @@ const UserProfile = ({ role = 'passenger', onProfileUpdate }) => {
     if (onProfileUpdate) onProfileUpdate({ publicKey: wallet.address, privateKey: wallet.privateKey });
   };
 
+  /**
+   * A restored backup lands exactly where a generated wallet does: same storage keys, same parent
+   * update, remembered on this device. The keystore already proved the private key derives to this
+   * address, so there is nothing left to validate here.
+   */
+  const handleRestored = ({ address, privateKey: restoredKey }) => {
+    setPublicKey(address);
+    setPrivateKey(restoredKey);
+    setRememberKeys(true);
+    setIsProfileSaved(true);
+    setShowRestore(false);
+    localStorage.setItem(keys.publicKey, address);
+    localStorage.setItem(keys.privateKey, restoredKey);
+    if (onProfileUpdate) onProfileUpdate({ publicKey: address, privateKey: restoredKey });
+  };
+
   const handleClearProfile = () => {
     setPublicKey('');
     setPrivateKey('');
     setIsProfileSaved(false);
     setRememberKeys(false);
     setShowImport(false);
+    setShowRestore(false);
     localStorage.removeItem(keys.publicKey);
     localStorage.removeItem(keys.privateKey);
     if (onProfileUpdate) onProfileUpdate({ publicKey: '', privateKey: '' });
@@ -113,10 +132,28 @@ const UserProfile = ({ role = 'passenger', onProfileUpdate }) => {
         <button type="button" onClick={handleGenerateWallet} className="btn-primary">
           Generate Wallet
         </button>
-        <button type="button" onClick={() => setShowImport(!showImport)} className="btn-secondary" style={{ fontSize: '0.8rem' }}>
+        <button
+          type="button"
+          onClick={() => { setShowImport(!showImport); setShowRestore(false); }}
+          className="btn-secondary"
+          style={{ fontSize: '0.8rem' }}
+        >
           {showImport ? 'Cancel' : 'Import Existing'}
         </button>
+        <button
+          type="button"
+          onClick={() => { setShowRestore(!showRestore); setShowImport(false); }}
+          className="btn-secondary"
+          style={{ fontSize: '0.8rem' }}
+        >
+          {showRestore ? 'Cancel' : 'Restore Backup'}
+        </button>
       </div>
+      {showRestore && (
+        <div style={{ marginTop: '1rem' }}>
+          <WalletBackupRestore onRestore={handleRestored} />
+        </div>
+      )}
       {showImport && (
         <form onSubmit={handleSaveProfile} style={{ marginTop: '1rem' }}>
           <label className="label">Public Key</label>

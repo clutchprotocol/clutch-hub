@@ -10,6 +10,7 @@ import BalanceDisplay from './components/BalanceDisplay';
 import DepositPanel from './components/DepositPanel';
 import WithdrawPanel from './components/WithdrawPanel';
 import { OverlayPanel } from './components/layout';
+import { WalletBackupExport } from './components/WalletBackup';
 import { truncAddr } from './utils/address';
 import './App.css';
 
@@ -37,6 +38,7 @@ function App() {
   const [walletCopied, setWalletCopied] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
 
   const initialTheme = useMemo(() => {
     if (typeof window === 'undefined') return 'dark';
@@ -260,6 +262,14 @@ function App() {
         />
       </OverlayPanel>
 
+      <OverlayPanel
+        open={backupOpen}
+        title="Back up wallet"
+        onClose={() => setBackupOpen(false)}
+      >
+        <WalletBackupExport role={mode} userProfile={userProfile} />
+      </OverlayPanel>
+
       <nav className="bottom-nav" aria-label="App navigation">
         <button
           type="button"
@@ -385,6 +395,18 @@ function App() {
                     }}
                   >
                     Withdraw to USDT
+                  </button>
+                )}
+                {userProfile.publicKey && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setBackupOpen(true);
+                    }}
+                  >
+                    Back up wallet
                   </button>
                 )}
                 <button type="button" className="btn-secondary" onClick={toggleTheme}>
