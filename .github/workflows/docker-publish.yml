@@ -61,9 +61,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # --ignore-scripts because installing the SDK as a file: dependency runs its `prepare`,
+      # which runs `tsc`, which fails here on options a newer TypeScript has removed
+      # (moduleResolution=node10). The image build compiles the SDK from its own lockfile and is
+      # unaffected, so this is a fragility in a fresh resolution rather than a live break -- but
+      # nothing under test imports the SDK, so building it to run these tests buys nothing and
+      # couples them to another repo's toolchain.
       - name: Install
         working-directory: build-context/clutch-hub-demo-app
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Test
         working-directory: build-context/clutch-hub-demo-app
         run: npm test
