@@ -31,9 +31,18 @@ Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environ
 ## Features
 
 ### User Profile Management
-- Store public and private keys securely
+- Generate, import or restore a wallet
 - Option to remember keys between sessions
+- Passphrase-encrypted backup and restore (see [Development](#development))
 - Visual feedback for active profile
+
+### Staying current
+- Installable as a PWA, and a new build announces itself rather than arriving unasked
+- `registerType` is `'prompt'`, not `'autoUpdate'`: a silent reload can take the page away
+  mid-ride, losing a half-entered fare or a pickup pin. A persistent banner with a **Reload**
+  button hands that timing to the user instead
+- It does not fade. The old build keeps working so there is no urgency, but there is also no second
+  chance to mention it
 
 ### Ride Request
 - Interactive map to select pickup and dropoff locations
@@ -64,11 +73,13 @@ This application demonstrates several key blockchain principles:
 
 ## Getting Started
 
-The demo uses **`clutch-hub-sdk-js`** from the **npm registry** (`^1.13.0`). Run `npm update clutch-hub-sdk-js` (or `npm run update:sdk`) to pull a newer published version.
+The demo uses **`clutch-hub-sdk-js`** from the **sibling checkout** — `package.json` declares it as `file:../clutch-hub-sdk-js`, and `predev`/`prebuild` build that repo first. So the SDK must be cloned next to this one, and an SDK change shows up here on the next `npm run dev`.
+
+This README previously said the SDK came from npm at `^1.13.0`. That has not been true for a long time and would not work if it were: the wire format broke at 3.0.0, and the published package is now 4.x.
 
 **Live lists:** `src/sdkRealtime.js` calls `subscribeRideRequests` / `subscribeRideOffers` / etc. when the installed SDK defines them (GraphQL over **WebSocket** to `/graphql/ws`). If those methods are missing (older npm package), the same UI falls back to **HTTP polling** so the app still runs.
 
-**Local SDK development:** To point at a sibling repo instead of npm, set `"clutch-hub-sdk-js": "file:../clutch-hub-sdk-js"` in `package.json` and optionally add a Vite `resolve.alias` to `../clutch-hub-sdk-js/src/index.ts` plus a direct `graphql-ws` dependency if you bundle from source.
+**Using a published SDK instead:** the sibling checkout is the default, not a workaround. To build against a registry version, replace `file:../clutch-hub-sdk-js` in `package.json` with a version range and drop the `build:sdk` step from `predev`/`prebuild` — that link is what makes them meaningful. `vite.config.js` also aliases the package to `../clutch-hub-sdk-js` and excludes it from `optimizeDeps`, which would need removing too.
 
 1. Clone the repository
 2. Install dependencies with `npm install`
@@ -114,8 +125,13 @@ Keys are role-scoped, so a passenger and a driver on the same browser are separa
 
 - `clutch_{passenger|driver}_publicKey` — the account address
 - `clutch_{passenger|driver}_privateKey` — the private key, in plain text
-- `clutch_demo_role`, `clutch_demo_theme` — which role and theme were last used
+- `clutch_demo_role` — which role was last used
+  (`clutch_demo_theme` is gone: the app has one palette since dark mode was removed on 2026-09-14, so any value left over from an older build is inert)
 - `clutch_tx_{publicKey}` — the last ~10 local transaction records, for the history panel
+
+Because that storage is lost by clearing site data, changing browser or changing machine, the app can write a **passphrase-encrypted backup** — PBKDF2-SHA256 then AES-GCM, both from the browser's own WebCrypto, no library. Export is in the menu while connected; restore is on the sign-in screen when you are not. Deliberately not a plaintext key file: this is the reference app, and the storage pattern people copy out of it should be one worth copying.
+
+Restoring re-derives the address from the decrypted key and refuses a file whose `address` field disagrees — that field sits outside the sealed envelope, so anyone can edit it, and without the check a backup could name an address whose key it does not hold.
 
 ## Best Practices
 
