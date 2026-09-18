@@ -2,7 +2,11 @@
 
 TypeScript client SDK for Clutch Protocol (npm: `clutch-hub-sdk-js`). Signs transactions
 client-side (secp256k1 + keccak-256 + RLP) and talks to the Hub API over GraphQL HTTP and
-graphql-ws subscriptions. See the parent `D:\source\clutch\CLAUDE.md` for the workspace overview.
+graphql-ws subscriptions.
+
+This package sits at `packages/sdk` in the `clutch-hub` workspace, beside the reference app at
+`apps/demo`. The repo root's `CLAUDE.md` covers the workspace and the release wiring; the parent
+`D:\source\clutch\CLAUDE.md` covers the whole Clutch project.
 
 ## Source Layout
 
@@ -21,8 +25,9 @@ Only four source files — the SDK is deliberately small:
 
 Tests live in `test/*.test.mjs` and use Node's built-in runner (`npm test` → `node --test test/`),
 no framework. They import from `dist/`, so `npm run build` first; the release workflow runs them
-after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` at the
-repo root are older ad-hoc manual scripts, not part of `npm test`.
+after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` beside
+this file are older ad-hoc manual scripts, not part of `npm test`. They used to be published to npm
+by accident and no longer are — `files` in `package.json` now lists exactly `dist` and `src`.
 
 ## Transaction Lifecycle (client side)
 
@@ -95,8 +100,9 @@ query and subscription), then a `listXxx` using `executeGraphQL` and/or a `subsc
 
 ## Build & Release
 
-- `npm run build` = `tsc` → `dist/` (declarations included). `prepare` also builds, which is what
-  makes the `file:` install work. No lint or test scripts exist despite CONTRIBUTING.md mentioning them.
+- `npm run build` = `tsc` → `dist/` (declarations included). `prepare` also builds, so a plain
+  `npm install` at the workspace root leaves `dist/` in place. No lint script exists despite
+  CONTRIBUTING.md mentioning one.
 - tsconfig: ES2020 target, `module: ESNext`, `strict: true`, DOM lib included (browser-first).
 - **semantic-release** on push to `main` (`.github/workflows/npm-publish.yml` + `.releaserc.json`):
   Conventional Commits required. `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch,
@@ -104,8 +110,13 @@ query and subscription), then a `listXxx` using `executeGraphQL` and/or a `subsc
   release nothing. Non-releasing pushes to `main` publish a `-canary.<sha>` build under the
   `canary` dist-tag. A `beta` branch does prereleases. CHANGELOG.md and package.json version are
   bot-committed (`chore(release): x.y.z [skip ci]`) — never bump the version by hand.
-- The demo app consumes this repo via `"clutch-hub-sdk-js": "file:../clutch-hub-sdk-js"`; its
-  `predev`/`prebuild` run `npm run build --prefix ../clutch-hub-sdk-js`. So SDK source changes
+- **It runs from the repo root, not from here**, with `pkgRoot: packages/sdk`. That keeps
+  `tagFormat` at `v${version}`, which is what the existing `v1`..`v4` tags use. See the root
+  `CLAUDE.md` — getting this wrong restarts versioning at 1.0.0.
+- **A commit that touches only `apps/demo` does not release**, because `npm-publish.yml` has a
+  `paths:` filter. semantic-release has no concept of paths and would otherwise count that commit.
+- The demo app consumes this package as a **workspace** (`"clutch-hub-sdk-js": "*"`), and
+  `apps/demo/vite.config.js` aliases the import to `../../packages/sdk`. So SDK source changes
   reach the demo app on its next `npm run dev` — but if Vite is already running you may need to
   restart / clear `node_modules/.vite` to pick up the rebuilt dist.
 
