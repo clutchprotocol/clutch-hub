@@ -1,3 +1,10 @@
+## [4.2.1](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v4.2.0...v4.2.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* put LICENSE and CHANGELOG.md back in the npm package ([#7](https://github.com/clutchprotocol/clutch-hub-sdk-js/issues/7)) ([d284c71](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/d284c7167b8a04c3c3ee1dd9a3c64e680a547483))
+
 ## [4.2.0](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v4.1.0...v4.2.0) (2026-09-18)
 
 
