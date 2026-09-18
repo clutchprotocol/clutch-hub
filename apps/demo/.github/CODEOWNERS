@@ -1,0 +1,5 @@
+# CODEOWNERS file for Clutch Node Repository
+# This file defines who is responsible for different parts of the codebase
+
+# Global ownership - Mehran Mazhar owns everything by default
+* @MehranMazhar

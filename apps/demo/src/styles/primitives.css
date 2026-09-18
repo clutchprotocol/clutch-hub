@@ -1,0 +1,170 @@
+/* ===== Cards (No-Line Rule: surface hierarchy) ===== */
+.card {
+  background: var(--surface-container);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--transition), background var(--transition);
+}
+
+.active-trip-card {
+  background: var(--surface-container-high);
+  border-left: 4px solid var(--primary-container);
+}
+
+.completed-trip-card {
+  background: var(--surface-container-high);
+  border-left: 4px solid var(--on-surface-variant);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.75rem 0;
+}
+
+/* ===== Buttons (Kinetic Precision: gradient primary) ===== */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-dim) 0%, var(--primary) 100%);
+  color: var(--on-primary-fixed);
+  padding: 0.6rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(39, 110, 241, 0.35);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: rgba(25, 37, 64, 0.6);
+  color: var(--on-surface-variant);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  transition: all var(--transition);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-container-high);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--on-surface-variant);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  transition: all var(--transition);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--on-surface);
+  background: var(--surface-container);
+}
+
+.btn-danger {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--error);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.14);
+}
+
+/* ===== Inputs (Precision Entry) ===== */
+.input-field {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: var(--surface-container-highest);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--on-surface);
+  font-size: 0.9rem;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input-field::placeholder {
+  color: var(--on-surface-variant);
+  opacity: 0.7;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: rgba(39, 110, 241, 0.4);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+/* ===== Status banners ===== */
+.status-banner {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+
+.status-banner.success {
+  background: rgba(5, 150, 105, 0.08);
+  color: #047857;
+  border-color: rgba(5, 150, 105, 0.2);
+}
+
+.status-banner.error {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--error);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.status-banner.warning {
+  background: rgba(217, 119, 6, 0.08);
+  color: var(--warning);
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.status-banner.info {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+  border-color: rgba(39, 110, 241, 0.25);
+}
+

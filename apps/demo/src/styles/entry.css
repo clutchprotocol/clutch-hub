@@ -1,0 +1,92 @@
+/* ===== Entry role selection screen ===== */
+.role-entry {
+  width: 100%;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem 1.75rem;
+}
+
+.role-entry-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.role-entry-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 0.75rem;
+}
+
+.role-entry-title {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.03em;
+}
+
+.role-entry-subtitle {
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+}
+
+.role-entry-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.role-entry-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-container-low);
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition), transform 120ms ease-out;
+}
+
+.role-entry-button--driver {
+  background: radial-gradient(circle at top left, rgba(0, 200, 83, 0.25), transparent 55%), var(--surface-container-low);
+}
+
+.role-entry-button--passenger {
+  background: radial-gradient(circle at top left, rgba(39, 110, 241, 0.25), transparent 55%), var(--surface-container-low);
+}
+
+.role-entry-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.role-entry-emoji {
+  font-size: 1.6rem;
+}
+
+.role-entry-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.role-entry-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.role-entry-hint {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+}
+

@@ -1,0 +1,185 @@
+/* Clutch Demo – Kinetic Precision Design System (from Stitch) */
+:root {
+  /* Typography */
+  --font-headline: 'Manrope', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-label: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-sans: var(--font-body);
+
+  /* Kinetic Precision – Dark theme */
+  --surface: #ffffff;
+  --surface-dim: #ffffff;
+  --background: #f7f9ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef2ff;
+  --surface-container: #e8efff;
+  --surface-container-high: #dde6ff;
+  --surface-container-highest: #d3dcff;
+  --surface-bright: #cbd6ff;
+  --surface-variant: #e6ecff;
+
+  /* Legacy aliases for components */
+  --bg-base: #f7f9ff;
+  --bg-surface: #eef2ff;
+  --bg-card: #e8efff;
+  --bg-elevated: #dde6ff;
+  --bg-highest: #d3dcff;
+
+  --outline: #5f6a86;
+  --outline-variant: #aab3c7;
+  --border: rgba(95, 106, 134, 0.18);
+  --border-subtle: rgba(95, 106, 134, 0.35);
+
+  /* Primary – The Pulse */
+  --primary: #8cacff;
+  --primary-dim: #256df0;
+  --primary-container: #276ef1;
+  --primary-fixed: #769dff;
+  --primary-fixed-dim: #5f8fff;
+  --surface-tint: #8cacff;
+
+  --on-primary: #002a6d;
+  --on-primary-fixed: #000000;
+  --on-primary-container: #ffffff;
+
+  /* Text */
+  --on-surface: #0b1220;
+  --on-background: #0b1220;
+  --on-surface-variant: #3f4a63;
+  --text-primary: #0b1220;
+  --text-secondary: #3f4a63;
+  --text-muted: #6a728a;
+  --text-inverse: #0b1220;
+
+  /* Secondary */
+  --secondary: #dbe6ff;
+  --secondary-dim: #c9d6ff;
+  --secondary-container: #a8b5d8;
+  --secondary-fixed: #dbe6ff;
+  --secondary-fixed-dim: #c9d6ff;
+  --on-secondary: #263141;
+  --on-secondary-container: #0b1220;
+
+  /* Tertiary */
+  --tertiary: #ffb7f9;
+  --tertiary-dim: #ef93ec;
+  --tertiary-container: #fea0fb;
+  --tertiary-fixed: #fea0fb;
+  --tertiary-fixed-dim: #ef93ec;
+  --on-tertiary: #722275;
+  --on-tertiary-container: #67176b;
+
+  /* Error & Success */
+  --error: #ff716c;
+  --error-dim: #d7383b;
+  --error-container: #9f0519;
+  --on-error: #490006;
+  --on-error-container: #ffa8a3;
+  --warning: #d97706;
+  --success: #059669;
+
+  /* Accent aliases */
+  --accent: #276ef1;
+  --accent-hover: #4d8aff;
+  --accent-muted: rgba(39, 110, 241, 0.15);
+  --accent-strong: #8cacff;
+
+  /* Roundness */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.22);
+
+  --transition: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* Theme helpers (used by App.css) */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --leaflet-container-bg: #e8eef7;
+  --leaflet-attribution-bg: rgba(255, 255, 255, 0.92);
+  --map-gradient-overlay-start: rgba(6, 14, 32, 0.12);
+  --map-gradient-overlay-mid: rgba(6, 14, 32, 0.18);
+}
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--on-surface);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all var(--transition);
+  line-height: 1.4;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input {
+  font-family: var(--font-body);
+  line-height: 1.4;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+::selection {
+  background: var(--accent-muted);
+  color: var(--on-surface);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-container);
+  outline-offset: 2px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.text-on-primary-fixed {
+  color: var(--on-primary-fixed);
+}
