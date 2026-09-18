@@ -1,3 +1,48 @@
+## [4.2.0](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v4.1.0...v4.2.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* adopt SDK v3 — bigint money, dollar display, pre-sign verification
+
+### Features
+
+* adopt SDK v3 — bigint money, dollar display, pre-sign verification ([2dedaf3](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/2dedaf30fa95ce398a3a861eb8d6b17d81d16a8e))
+* BottomSheet, OverlayPanel, Toast primitives for map-first shell ([d867846](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/d867846916482dba092d2d914df8e1db6f9ed47d))
+* dark-theme map tiles across trip cards and network view ([bfd49de](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/bfd49deaf4dfd0b232280a7cdb666c5f409c965e))
+* driver flow on full-screen map with request list/detail sheet ([a6fdec4](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/a6fdec4f76b23c529013a89d538d5108c6bbf31a))
+* encrypted wallet backup and restore ([f0be0a5](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/f0be0a5211756772bffe9d75d58c0f8141c61839))
+* make this an npm workspace holding the SDK and the demo app ([e974923](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/e97492368eade0dd65640ac2c2d6b1fc758e482a))
+* map-first app shell (floating top bar, hub overlay, unified nav) ([aa9049d](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/aa9049d5ac159712fb4f771b5673b632902c2276))
+* pass private key to SDK for auth challenge ([32e1ab1](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/32e1ab1aac0faa32d665b64259f9f6b45ea5a4d7))
+* passenger flow in full-screen map + bottom sheet ([e95a134](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/e95a134364588ff7b734b5194a8164bdfa461ad6))
+* redeem CLT for USDT from the app ([2a53ba4](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/2a53ba46b773a28f671d7a3deb5fae7d26d13320))
+* say what this app does with a private key, before one exists ([974461f](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/974461ff73242b50ac1b02e7abacd78ec23dd450))
+* show a permanent deposit address instead of asking for an amount ([86cf02a](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/86cf02a64831a6c8cfea92a8d760b0e0d854a036))
+* show recent deposits and their state in the top-up panel ([8dd0c19](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/8dd0c19a5f6daf08e54c8a3a8033ce0a90aa9390))
+* stack the menu actions, and drop dark mode ([7cb39bf](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/7cb39bf44b96426b9ddcb5ef822041817f6cacb5))
+* tell testnet users where to get USDT to deposit ([811f258](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/811f2581d8823cb2504773a12ffe01f1114abe95))
+* tell the passenger what accepting an offer costs them ([e17c3ce](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/e17c3ce6f4627b55034c353bceaf3699cf8da27d))
+* theme-aware map tile plumbing (useTheme, getMapTileUrl) ([d28d44e](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/d28d44e9e96a850a634ebe515be4d1af20fb5dee))
+* top up with USDT — deposit panel wired to the payment orchestrator ([5c86648](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/5c8664812fab3ad3c06f29ec7a56909bb97fd4a4))
+
+
+### Bug Fixes
+
+* delete the production build path, which never worked ([cec9151](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/cec9151414529fce42cbbaf6c7b3199675bc28b6))
+* **deposits:** show when the transfer landed, not when the row appeared ([22c5595](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/22c55955fd5dd165e26007330a16e6c6d703a770)), closes [clutchprotocol/clutch-treasury#9](https://github.com/clutchprotocol/clutch-treasury/issues/9)
+* fetch the deposit address only while the panel is open ([9087dde](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/9087ddebd416260fc9548c481bcefe13c3303b62))
+* formatUsd must accept the decimal strings the hub actually sends ([4fdf22d](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/4fdf22dbfff891ab4fa35579ee46c35ae3e6c5e5))
+* let the app update itself, and let the user choose when ([837fd7b](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/837fd7b74075c35d9cdd0a4ec082d328af17a67c))
+* map tiles no longer need a CARTO API key ([7902ee4](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/7902ee45ac0fbcc311ecc7a91e00c50a093b47a4))
+* show the withdrawal fee before the burn, not after ([567529f](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/567529fa5249cdf68f6e06065a1dffb2dfb16985))
+* start the deposit panel in its loading state; log a failed re-fetch ([72734ee](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/72734ee5695340f8650e66a344db9d60bb5ed6c9))
+* stop serving a stale build, and show the deposit address in full ([4fe1222](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/4fe1222166cabd3ddd028aa772c9694003eb8914))
+* stop serving a stale build, and show the deposit address in full ([39dc917](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/39dc917eaad8165368b5d55432cfb19ce1c0a9f6))
+* the deposit amount is a minimum now, not an exact figure ([610750d](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/610750da757a0211a262d07677b02c8bd85dd0ca))
+* the deposit-list poller must not outlive the panel ([d1a9ff9](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/d1a9ff94ef0db42438eb7b9522f013a811c9e1ac))
+* verify the burn before signing it, and re-read before broadcasting ([2df94c6](https://github.com/clutchprotocol/clutch-hub-sdk-js/commit/2df94c6101fac2abc79e1792a3b157a3deae2e1e))
+
 ## [4.1.0](https://github.com/clutchprotocol/clutch-hub-sdk-js/compare/v4.0.0...v4.1.0) (2026-09-10)
 
 
