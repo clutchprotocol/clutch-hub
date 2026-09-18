@@ -132,19 +132,47 @@ jobs:
 
   # Tell clutch-deploy to SSH-deploy stage (pull latest images + recreate). Requires org/repo secret
   # CLUTCH_DEPLOY_DISPATCH_TOKEN: PAT with repo scope able to POST repository_dispatch to clutch-deploy.
+  #
+  # This job used to carry `continue-on-error: true`. With the secret missing it failed, the run
+  # still showed green, and stage quietly kept serving the previous image -- a deploy that does not
+  # happen reporting success. That is the same failure shape as an nginx include matching no files:
+  # it loads, it reports nothing wrong, and it does nothing. The repo has been bitten by that shape
+  # four times in two days and it is written up in clutch-deploy/docs/ALERTING.md.
+  #
+  # Found for real when the workflow moved here from clutch-hub-demo-app on 2026-09-18 and its
+  # three secrets did not come with it.
   trigger-stage-deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
 
     steps:
+      # Checked before the dispatch, not only by letting the action fail: an EMPTY token is the
+      # likeliest way to get here, and it produces a vaguer error than a wrong one does.
+      - name: Check the dispatch token is present
+        env:
+          TOKEN: ${{ secrets.CLUTCH_DEPLOY_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLUTCH_DEPLOY_DISPATCH_TOKEN is not set on this repository."
+            echo "::error::The image WAS pushed. Stage will NOT deploy it."
+            echo "::error::Add the secret (a PAT with repo scope), then either re-run this workflow or dispatch deploy-stage in clutch-deploy by hand."
+            exit 1
+          fi
+
       - name: Trigger deploy-stage in clutch-deploy
-        continue-on-error: true
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CLUTCH_DEPLOY_DISPATCH_TOKEN }}
           repository: clutchprotocol/clutch-deploy
           event-type: deploy-stage
+
+      # The dispatch being accepted is not the deploy succeeding. Say so, so a green tick here is
+      # not read as "stage is running the new image".
+      - name: What this proves, and what it does not
+        run: |
+          echo "Dispatched deploy-stage to clutchprotocol/clutch-deploy."
+          echo "That deploy is a separate run with its own result. This job only proves the request was accepted."
 
   update-description:
     needs: build-and-push
