@@ -1,3 +1,12 @@
+# Builds and publishes the apps/demo image.
+#
+# Before the repos were merged this workflow checked THIS repo out beside the demo app to fake a
+# monorepo layout, and the Dockerfile copied two sibling directories. Both are gone: there is one
+# checkout and the build context is the workspace root.
+#
+# `packages/sdk/**` is in the paths filter on purpose. The demo bundles the SDK, so an SDK change
+# changes the image — and under the old two-repo split it could not trigger this build at all,
+# which meant the published image could lag the SDK indefinitely.
 name: Build and Push Docker Image (GHCR + Docker Hub)
 
 on:
@@ -6,26 +15,21 @@ on:
     tags:
       - 'v*'
     paths:
-      - 'src/**'
-      - 'public/**'
+      - 'apps/demo/**'
+      - 'packages/sdk/**'
       - 'package.json'
       - 'package-lock.json'
-      - 'Dockerfile'
-      - 'index.html'
-      - 'vite.config.js'
-      - 'pollIntervals.js'
+      - '.dockerignore'
       - '.github/workflows/docker-publish.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/**'
-      - 'public/**'
+      - 'apps/demo/**'
+      - 'packages/sdk/**'
       - 'package.json'
       - 'package-lock.json'
-      - 'Dockerfile'
-      - 'index.html'
-      - 'vite.config.js'
-      - 'pollIntervals.js'
+      - '.dockerignore'
+      - '.github/workflows/docker-publish.yml'
   workflow_dispatch:
 
 env:
@@ -46,52 +50,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout demo app
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: build-context/clutch-hub-demo-app
-      # package.json depends on the SDK by relative path, so `npm ci` needs the sibling present
-      # even though nothing under test imports it.
-      - name: Checkout SDK (monorepo layout)
-        uses: actions/checkout@v4
-        with:
-          repository: clutchprotocol/clutch-hub-sdk-js
-          path: build-context/clutch-hub-sdk-js
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # The SDK first, from ITS own lockfile -- the same order the Dockerfile uses, and not
-      # optional. Installing the demo app runs the SDK's `prepare` as a file: dependency, and
-      # `--ignore-scripts` does not stop that. Without the SDK's own node_modules already in place
-      # that build resolves a fresh TypeScript major and dies on options it has removed, which is a
-      # failure of this job rather than of the SDK.
-      - name: Build the SDK, as the image does
-        working-directory: build-context/clutch-hub-sdk-js
-        run: npm ci && npm run build
+          cache: 'npm'
+      # One install for both workspaces. The SDK's `prepare` builds it as part of this.
       - name: Install
-        working-directory: build-context/clutch-hub-demo-app
         run: npm ci
-      - name: Test
-        working-directory: build-context/clutch-hub-demo-app
-        run: npm test
+      - name: Build the SDK
+        run: npm run build --workspace=clutch-hub-sdk-js
+      - name: Test the demo app
+        run: npm run test --workspace=clutch-hub-demo-app
+      - name: Test the SDK
+        run: npm run test --workspace=clutch-hub-sdk-js
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout demo app
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: build-context/clutch-hub-demo-app
-
-      - name: Checkout SDK (monorepo layout for Dockerfile)
-        uses: actions/checkout@v4
-        with:
-          repository: clutchprotocol/clutch-hub-sdk-js
-          path: build-context/clutch-hub-sdk-js
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -131,8 +112,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./build-context
-          file: ./build-context/clutch-hub-demo-app/Dockerfile
+          context: .
+          file: ./apps/demo/Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -180,4 +161,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ env.DH_IMAGE }}
-          readme-filepath: ./README.md
+          readme-filepath: ./apps/demo/README.md

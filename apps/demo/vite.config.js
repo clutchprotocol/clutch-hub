@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const sdkRoot = path.resolve(__dirname, '../clutch-hub-sdk-js');
+const sdkRoot = path.resolve(__dirname, '../../packages/sdk');
 
 // https://vite.dev/config/
 export default defineConfig({

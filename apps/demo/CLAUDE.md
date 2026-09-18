@@ -1,14 +1,15 @@
 # clutch-hub-demo-app — CLAUDE.md
 
-Reference passenger/driver UI for Clutch Protocol. React 19 + Vite 6 + react-leaflet 5, plain JSX (no TypeScript), PWA-enabled. See the parent `D:\source\clutch\CLAUDE.md` for the workspace-wide architecture; this file covers this repo only.
+Reference passenger/driver UI for Clutch Protocol. React 19 + Vite 6 + react-leaflet 5, plain JSX (no TypeScript), PWA-enabled. It lives at `apps/demo` in the `clutch-hub` workspace, beside the SDK at `packages/sdk`. See the parent `D:\source\clutch\CLAUDE.md` for the workspace-wide architecture and the repo root's `CLAUDE.md` for the workspace itself; this file covers the app only.
 
 ## Commands
 
-- `npm run dev` — starts Vite on 5173. `predev`/`prebuild` first run `npm run build --prefix ../clutch-hub-sdk-js`, so the sibling SDK repo must exist and build.
-- `npm run build` / `npm run lint` (flat-config ESLint 9, JS/JSX only) / `npm run preview`.
-- There is no separate production build path. `package.prod.json`, `build:prod`, `install:prod`, and the two PowerShell deploy scripts were deleted on 2026-09-10: all four were broken (`install:prod` stripped vite before invoking it, `deploy-prod.ps1` deleted the lockfile then ran `npm ci`, `restore-dev.ps1` needed an untracked file) and the pin was stuck at SDK `^1.15.0`, which cannot resolve past the 3.0.0 wire-format break. The image build in `Dockerfile` is the production path: it copies both repos, builds the SDK, then runs `npm run build` here.
+- Run them from the **repo root**, not from here: `npm run dev` (Vite on 5173), `npm run build:demo`, `npm run lint`.
+- `predev`/`prebuild` are gone. They used to run `npm run build --prefix ../clutch-hub-sdk-js` because the SDK was a separate checkout reached by `file:`. It is a workspace now, and the SDK's own `prepare` builds it during `npm install`.
+- `npm run build` / `npm run lint` (flat-config ESLint 9, JS/JSX only) / `npm run preview` still work from this directory if you prefer.
+- There is no separate production build path. `package.prod.json`, `build:prod`, `install:prod`, and the two PowerShell deploy scripts were deleted on 2026-09-10: all four were broken (`install:prod` stripped vite before invoking it, `deploy-prod.ps1` deleted the lockfile then ran `npm ci`, `restore-dev.ps1` needed an untracked file) and the pin was stuck at SDK `^1.15.0`, which cannot resolve past the 3.0.0 wire-format break. The image build in `Dockerfile` is the production path: **its context is the repo root**, and it runs one `npm ci` for both workspaces before building the SDK and then this app.
 - `npm test` — Node's own test runner over `src/**/*.test.js`. No framework, no dependency. Only `utils/keystore.test.js` exists so far; it gates the image build in `docker-publish.yml`, because most of what it asserts are refusals and a refusal that silently stops happening looks exactly like success from the UI.
-- The test job builds the SDK from ITS own lockfile first, exactly as the Dockerfile does. Installing this app runs the SDK's `prepare` as a `file:` dependency and `--ignore-scripts` does not stop it, so without the SDK's own `node_modules` that build resolves a fresh TypeScript major and dies on options it has removed.
+- The old CI checked the SDK repo out beside this one and installed it from its own lockfile, to recreate a layout that did not exist. Both repos are one now, so there is a single checkout and a single lockfile, and `docker-publish.yml` rebuilds the image when `packages/sdk/**` changes — which the split could not do at all.
 
 Env vars (Vite, must be prefixed `VITE_`):
 - `VITE_API_URL` — Hub API base (default `http://localhost:3000`). Overridden at runtime by hostname sniffing in `src/config.js`: `app-stage.*` → `api-stage.*` (and legacy `stageweb.*`/port-81 mappings) win over the env var.
@@ -73,8 +74,8 @@ Env vars (Vite, must be prefixed `VITE_`):
 
 ## Gotchas / conventions
 
-- **SDK is aliased to the sibling repo**: `vite.config.js` resolves `clutch-hub-sdk-js` to `../clutch-hub-sdk-js` and excludes it from `optimizeDeps` (avoids stale pre-bundles). SDK behavior changes require rebuilding the SDK — restart `npm run dev` or rerun `npm run build:sdk`.
-- **SDK version compat**: newer SDK methods are feature-detected (`typeof sdk.method === 'function'`) with an HTTP-polling fallback, as done throughout `sdkRealtime.js`. The original reason (a prod build pinning an older published SDK) is gone with `package.prod.json`, but keep the guards: they are what lets someone swap the path link for a registry version without the app breaking, and the fallbacks cost nothing.
+- **SDK is aliased to the workspace**: `vite.config.js` resolves `clutch-hub-sdk-js` to `../../packages/sdk` and excludes it from `optimizeDeps` (avoids stale pre-bundles). SDK behavior changes require rebuilding the SDK — restart `npm run dev`, or run `npm run build --workspace=clutch-hub-sdk-js` from the root.
+- **SDK version compat**: newer SDK methods are feature-detected (`typeof sdk.method === 'function'`) with an HTTP-polling fallback, as done throughout `sdkRealtime.js`. The original reason (a prod build pinning an older published SDK) is gone with `package.prod.json`, but keep the guards: they are what lets someone swap the workspace link for a registry version without the app breaking, and the fallbacks cost nothing.
 - **Leaflet icon fix**: every map-rendering component does `delete L.Icon.Default.prototype._getIconUrl` + `mergeOptions` with imported marker PNGs — keep this boilerplate when adding a map, or default markers 404 under Vite.
 - Maps in hidden panels: panels stay mounted, so guard leaflet animations (`flyTo`) with container-visibility checks (see `MapFlyToLocation` in PassengerView) — Leaflet throws on hidden/zero-size maps.
 - React 19 + StrictMode: effects run twice in dev; subscription effects must return their dispose function (all current ones do). No class components, no react-router, no CSS modules.

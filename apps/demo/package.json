@@ -4,15 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build:sdk": "npm run build --prefix ../clutch-hub-sdk-js",
-    "predev": "npm run build:sdk",
-    "prebuild": "npm run build:sdk",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test src/",
     "preview": "vite preview",
-    "update:sdk": "npm update clutch-hub-sdk-js",
+    "update:sdk": "npm run build --workspace=clutch-hub-sdk-js",
     "check:sdk": "npm list clutch-hub-sdk-js"
   },
   "dependencies": {
@@ -21,7 +18,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/manrope": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
-    "clutch-hub-sdk-js": "file:../clutch-hub-sdk-js",
+    "clutch-hub-sdk-js": "*",
     "leaflet": "^1.9.4",
     "material-symbols": "^0.43.0",
     "react": "^19.1.0",

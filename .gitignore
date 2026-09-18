@@ -3,7 +3,10 @@ node_modules/
 
 # Build output
 dist/
+dev-dist/
 build/
+dist-ssr
+*.local
 
 # Logs
 logs
@@ -19,10 +22,14 @@ lerna-debug.log*
 
 # Editor directories and files
 .vscode/
+!.vscode/extensions.json
 .idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw? 
+*.sw?
+
+# subagent-driven-development scratch
+.superpowers/

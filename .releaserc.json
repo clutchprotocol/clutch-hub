@@ -42,7 +42,7 @@
           },
           {
             "type": "build",
-            "release": false
+            "release": "patch"
           },
           {
             "type": "ci",
@@ -51,10 +51,6 @@
           {
             "type": "chore",
             "release": false
-          },
-          {
-            "breaking": true,
-            "release": "major"
           }
         ]
       }
@@ -68,17 +64,28 @@
     [
       "@semantic-release/changelog",
       {
-        "changelogFile": "CHANGELOG.md"
+        "changelogFile": "packages/sdk/CHANGELOG.md"
       }
     ],
-    "@semantic-release/npm",
+    [
+      "@semantic-release/npm",
+      {
+        "pkgRoot": "packages/sdk"
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "npm install --package-lock-only --ignore-scripts"
+      }
+    ],
     [
       "@semantic-release/git",
       {
         "assets": [
-          "package.json",
-          "package-lock.json",
-          "CHANGELOG.md"
+          "packages/sdk/package.json",
+          "packages/sdk/CHANGELOG.md",
+          "package-lock.json"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }

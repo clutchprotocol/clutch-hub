@@ -1,0 +1,24 @@
+{
+  "name": "clutch-hub",
+  "private": true,
+  "description": "Workspace root: the Clutch Hub SDK and the reference app that uses it",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=clutch-hub-sdk-js",
+    "build:demo": "npm run build --workspace=clutch-hub-demo-app",
+    "dev": "npm run dev --workspace=clutch-hub-demo-app",
+    "lint": "npm run lint --workspace=clutch-hub-demo-app",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "semantic-release": "^22.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/exec": "^6.0.0",
+    "@semantic-release/git": "^10.0.0",
+    "conventional-changelog-conventionalcommits": "^7.0.0"
+  }
+}

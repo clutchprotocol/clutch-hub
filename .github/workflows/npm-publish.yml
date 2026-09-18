@@ -1,9 +1,25 @@
+# Publishes packages/sdk to npm as `clutch-hub-sdk-js`.
+#
+# This repo also holds apps/demo, which is `"private": true` and can never be published. The
+# `paths:` filter below is the thing that keeps a demo-only change from cutting an SDK release:
+# semantic-release itself has no concept of paths and would count every commit since the last tag.
+#
+# semantic-release runs from the REPO ROOT, not from packages/sdk, so that `tagFormat` stays at its
+# default `v${version}` and the existing v1..v4 tags keep counting. `pkgRoot` in .releaserc.json is
+# what points the npm plugin at the package. Moving the run into packages/sdk would have changed
+# the tag format and restarted versioning at 1.0.0.
 name: Publish to NPM
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'packages/sdk/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.releaserc.json'
+      - '.github/workflows/npm-publish.yml'
     tags:
       - 'v*'
 
@@ -20,11 +36,11 @@ jobs:
       issues: write   # Required for semantic-release to comment on issues
       pull-requests: write # Required for semantic-release to comment on PRs
       id-token: write # Required for npm provenance
-    
+
     outputs:
       released: ${{ steps.semantic-release.outputs.released }}
       version: ${{ steps.semantic-release.outputs.version }}
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,7 +63,7 @@ jobs:
         run: npm run build
 
       - name: Test (against dist/)
-        run: npm test
+        run: npm run test --workspace=clutch-hub-sdk-js
 
       - name: Run semantic-release
         id: semantic-release
@@ -55,7 +71,7 @@ jobs:
           npx semantic-release --debug
           echo "released=$(if [ -f .semantic-release-released ]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_OUTPUT
           if [ -f .semantic-release-released ]; then
-            VERSION=$(node -p "require('./package.json').version")
+            VERSION=$(node -p "require('./packages/sdk/package.json').version")
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "🎉 Released version: ${VERSION}"
           else
@@ -76,7 +92,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # Required for npm provenance
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,18 +115,23 @@ jobs:
       - name: Generate canary version
         id: canary-version
         run: |
-          BASE_VERSION=$(node -p "require('./package.json').version")
+          BASE_VERSION=$(node -p "require('./packages/sdk/package.json').version")
           SHORT_SHA=$(git rev-parse --short HEAD)
           CANARY_VERSION="${BASE_VERSION}-canary.${SHORT_SHA}"
           echo "version=${CANARY_VERSION}" >> $GITHUB_OUTPUT
           echo "Generated canary version: ${CANARY_VERSION}"
 
+      # --no-git-tag-version and --no-workspaces-update: this bump is throwaway, it exists only so
+      # the tarball carries a unique version. Letting it touch the root lockfile would leave the
+      # working tree dirty for nothing.
       - name: Update package.json version
+        working-directory: packages/sdk
         run: |
           npm version ${{ steps.canary-version.outputs.version }} --no-git-tag-version
-          echo "Updated package.json to version: ${{ steps.canary-version.outputs.version }}"
+          echo "Updated packages/sdk/package.json to version: ${{ steps.canary-version.outputs.version }}"
 
       - name: Publish canary to NPM
+        working-directory: packages/sdk
         run: npm publish --tag canary --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -118,7 +139,7 @@ jobs:
       - name: Output canary version
         run: |
           echo "🚀 Published canary version: ${{ steps.canary-version.outputs.version }}"
-          echo "📦 Install with: npm install $(node -p "require('./package.json').name")@canary"
+          echo "📦 Install with: npm install clutch-hub-sdk-js@canary"
 
   publish-stable:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -126,7 +147,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # Required for npm provenance
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -153,18 +174,19 @@ jobs:
 
       - name: Validate version matches package.json
         run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_VERSION=$(node -p "require('./packages/sdk/package.json').version")
           TAG_VERSION=${{ steps.extract-version.outputs.version }}
           if [ "${PACKAGE_VERSION}" != "${TAG_VERSION}" ]; then
             echo "❌ Version mismatch!"
-            echo "   package.json: ${PACKAGE_VERSION}"
-            echo "   Git tag:      v${TAG_VERSION}"
-            echo "   Please ensure package.json version matches the git tag (without 'v' prefix)"
+            echo "   packages/sdk/package.json: ${PACKAGE_VERSION}"
+            echo "   Git tag:                   v${TAG_VERSION}"
+            echo "   Please ensure the package version matches the git tag (without 'v' prefix)"
             exit 1
           fi
           echo "✅ Version validation passed: ${TAG_VERSION}"
 
       - name: Publish stable to NPM
+        working-directory: packages/sdk
         run: npm publish --tag latest --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -172,15 +194,14 @@ jobs:
       - name: Output stable version
         run: |
           echo "🎉 Published stable version: ${{ steps.extract-version.outputs.version }}"
-          echo "📦 Install with: npm install $(node -p "require('./package.json').name")"
-          echo "📦 Or install latest: npm install $(node -p "require('./package.json').name")@latest"
+          echo "📦 Install with: npm install clutch-hub-sdk-js"
 
   # Optional: Create a summary of what was published
   publish-summary:
     if: always() && (needs.semantic-release.result != 'skipped' || needs.publish-canary.result != 'skipped' || needs.publish-stable.result != 'skipped')
     needs: [semantic-release, publish-canary, publish-stable]
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -189,9 +210,9 @@ jobs:
         run: |
           echo "## 📦 NPM Publish Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          
+
+          PACKAGE_NAME=$(node -p "require('./packages/sdk/package.json').name")
+
           if [ "${{ needs.semantic-release.outputs.released }}" == "true" ]; then
             echo "### 🎉 Semantic Release Published" >> $GITHUB_STEP_SUMMARY
             echo "- **Package**: \`${PACKAGE_NAME}\`" >> $GITHUB_STEP_SUMMARY
@@ -208,7 +229,7 @@ jobs:
             echo "- **Reason**: No qualifying commits for semantic release" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [ "${{ needs.publish-stable.result }}" == "success" ]; then
             echo "### 🏷️ Manual Tag Release Published" >> $GITHUB_STEP_SUMMARY
             echo "- **Package**: \`${PACKAGE_NAME}\`" >> $GITHUB_STEP_SUMMARY
@@ -216,14 +237,14 @@ jobs:
             echo "- **Install**: \`npm install ${PACKAGE_NAME}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "### 📋 Commit Message Format" >> $GITHUB_STEP_SUMMARY
           echo "Use conventional commits for automatic releases:" >> $GITHUB_STEP_SUMMARY
           echo "- \`feat: new feature\` → minor release" >> $GITHUB_STEP_SUMMARY
           echo "- \`fix: bug fix\` → patch release" >> $GITHUB_STEP_SUMMARY
           echo "- \`feat!: breaking change\` → major release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "### 📋 Links" >> $GITHUB_STEP_SUMMARY
           echo "- [NPM Package](https://www.npmjs.com/package/${PACKAGE_NAME})" >> $GITHUB_STEP_SUMMARY
           echo "- [Repository](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY

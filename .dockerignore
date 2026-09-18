@@ -1,0 +1,13 @@
+# Docker builds use the workspace root as context (see apps/demo/Dockerfile), so this is the
+# .dockerignore that applies. apps/demo/.dockerignore is no longer read by anything.
+node_modules
+**/node_modules
+**/dist
+**/dev-dist
+.git
+.gitignore
+.github
+*.md
+**/*.md
+.env*
+.DS_Store
