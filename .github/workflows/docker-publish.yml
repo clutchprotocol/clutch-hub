@@ -21,12 +21,8 @@ on:
   workflow_dispatch:
 
 env:
-  # Registries
   GHCR_REGISTRY: ghcr.io
-  DH_REGISTRY: docker.io
-
   GHCR_IMAGE: clutchprotocol/clutch-hub-api
-  DH_IMAGE: 9194010019/clutch-hub-api
 
 permissions:
   contents: read
@@ -55,23 +51,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Login Docker Hub
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.DH_REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # One metadata step generates tags for BOTH registries
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE }}
-            ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
@@ -99,35 +84,40 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
 
-  # Optional: same secret as clutch-hub-demo-app — PAT with repo access to dispatch on clutch-deploy.
+  # Same secret as the other Clutch repos — PAT with repo access to dispatch on clutch-deploy.
+  #
+  # This job used to carry `continue-on-error: true`. With the secret missing it failed, the run
+  # still reported green, and stage quietly kept serving the previous image. A deploy that does
+  # not happen must not report success — see clutch-deploy/docs/ALERTING.md on that failure shape.
   trigger-stage-deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
 
     steps:
+      # Checked before the dispatch: an EMPTY token is the likeliest way to get here and fails
+      # more vaguely than a wrong one.
+      - name: Check the dispatch token is present
+        env:
+          TOKEN: ${{ secrets.CLUTCH_DEPLOY_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLUTCH_DEPLOY_DISPATCH_TOKEN is not set on this repository."
+            echo "::error::The image WAS pushed. Stage will NOT deploy it."
+            echo "::error::Add the secret (a PAT with repo scope), then re-run this workflow or dispatch deploy-stage in clutch-deploy by hand."
+            exit 1
+          fi
+
       - name: Trigger deploy-stage in clutch-deploy
-        continue-on-error: true
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CLUTCH_DEPLOY_DISPATCH_TOKEN }}
           repository: clutchprotocol/clutch-deploy
           event-type: deploy-stage
 
-  update-description:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - name: What this proves, and what it does not
+        run: |
+          echo "Dispatched deploy-stage to clutchprotocol/clutch-deploy."
+          echo "That deploy is a separate run with its own result. This job only proves the request was accepted."
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ env.DH_IMAGE }}
-          readme-filepath: ./README.md
 
