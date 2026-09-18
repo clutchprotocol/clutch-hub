@@ -7,7 +7,7 @@
 # `packages/sdk/**` is in the paths filter on purpose. The demo bundles the SDK, so an SDK change
 # changes the image — and under the old two-repo split it could not trigger this build at all,
 # which meant the published image could lag the SDK indefinitely.
-name: Build and Push Docker Image (GHCR + Docker Hub)
+name: Build and Push Docker Image (GHCR)
 
 on:
   push:
@@ -34,9 +34,7 @@ on:
 
 env:
   GHCR_REGISTRY: ghcr.io
-  DH_REGISTRY: docker.io
   GHCR_IMAGE: clutchprotocol/clutch-hub-demo-app
-  DH_IMAGE: 9194010019/clutch-hub-demo-app
 
 permissions:
   contents: read
@@ -88,27 +86,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.DH_REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE }}
-            ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
 
-      - name: Build and push Docker image (both registries)
+      - name: Build and push Docker image
         id: build
         uses: docker/build-push-action@v5
         with:
@@ -173,20 +162,3 @@ jobs:
         run: |
           echo "Dispatched deploy-stage to clutchprotocol/clutch-deploy."
           echo "That deploy is a separate run with its own result. This job only proves the request was accepted."
-
-  update-description:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ env.DH_IMAGE }}
-          readme-filepath: ./apps/demo/README.md
