@@ -1,0 +1,20 @@
+/* Kinetic Precision, split by concern.
+ *
+ * This file is imports only. CSS cascade is source order, so these must stay in this order --
+ * responsive.css overrides rules defined above it, and moving it would change the layout
+ * without changing a single rule.
+ *
+ * The split was mechanical: every part is a contiguous range of the original App.css, and
+ * concatenating them in this order reproduces it byte for byte. Nothing was rewritten.
+ */
+@import "./styles/shell.css";
+@import "./styles/entry.css";
+@import "./styles/wallet.css";
+@import "./styles/primitives.css";
+@import "./styles/map.css";
+@import "./styles/sections.css";
+@import "./styles/explorer.css";
+@import "./styles/forms.css";
+@import "./styles/trip.css";
+@import "./styles/responsive.css";
+@import "./styles/overlays.css";

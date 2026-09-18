@@ -1,0 +1,134 @@
+/* ===== Utility ===== */
+.truncate-address {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.fare-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-dot--live {
+  background: var(--success);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot--done {
+  background: var(--success);
+}
+
+.status-dot--error {
+  background: var(--error);
+}
+
+.status-dot--warn {
+  background: var(--warning);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ===== Form & layout ===== */
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.offer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-container-low);
+  border-radius: var(--radius);
+  border: none;
+}
+
+.offer-row + .offer-row {
+  margin-top: 0.75rem;
+}
+
+.offer-row--driver {
+  align-items: flex-start;
+}
+
+.offer-row-driver {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.offer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-container), var(--primary-dim));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.offer-row-driver-meta {
+  min-width: 0;
+}
+
+.offer-row-driver-address {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--on-surface);
+  margin: 0;
+  word-break: break-word;
+}
+
+.offer-row-driver-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  margin: 0.15rem 0 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.offer-row-actions {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.offer-row-price {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--on-surface);
+  margin: 0;
+  font-family: var(--font-headline);
+  white-space: nowrap;
+}
+

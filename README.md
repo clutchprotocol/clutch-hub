@@ -1,70 +1,46 @@
-# clutch-hub-sdk-js
+# Clutch Hub
 
-![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-![Experimental](https://img.shields.io/badge/stage-experimental-red.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
-[![npm](https://img.shields.io/npm/v/clutch-hub-sdk-js.svg)](https://www.npmjs.com/package/clutch-hub-sdk-js)
+The Clutch Hub JavaScript SDK and the reference app built on it, in one npm workspace.
 
-> ⚠️ **ALPHA SOFTWARE** — APIs may change without notice.
+| Path | What it is | Published as |
+|---|---|---|
+| [`packages/sdk`](packages/sdk) | The SDK: client-side signing, GraphQL queries and subscriptions | npm — [`clutch-hub-sdk-js`](https://www.npmjs.com/package/clutch-hub-sdk-js) |
+| [`apps/demo`](apps/demo) | Reference passenger/driver UI, React 19 + Vite | Docker image `clutchprotocol/clutch-hub-demo-app`. `"private": true`, never published to npm |
 
-JavaScript/TypeScript SDK for the Clutch Hub API and Clutch blockchain.
+## Using the SDK in your own app
 
-**Documentation:** https://docs.clutchprotocol.io/clutch-hub-sdk-js/overview
-
-## Install
+Nothing here changes how you install it:
 
 ```bash
 npm install clutch-hub-sdk-js
 ```
 
-## Usage
+`apps/demo` is the worked example. It is a full application, it is built and tested on every
+change to the SDK, and you can run it.
 
-```javascript
-import { ClutchHubSdk } from 'clutch-hub-sdk-js';
+## Working in this repo
 
-// privateKey is needed for authenticated calls: generateToken requires a signed
-// proof-of-key-ownership challenge (the key stays local, it is never sent).
-// chainId comes from your own config, never from the hub. The optional fifth argument
-// sets the HTTP timeout (default 30 s; 0 disables it).
-const sdk = new ClutchHubSdk('http://localhost:3000', publicKey, privateKey, 2077, { timeoutMs: 30_000 });
-
-// Create, sign, and submit a ride request. Amounts are bigint: 1 USD = 1,000,000 CLT.
-const unsigned = await sdk.createUnsignedRideRequest({
-  pickup: { latitude: 35.7, longitude: 51.4 },
-  dropoff: { latitude: 35.8, longitude: 51.5 },
-  fare: 5_000_000n,
-});
-const signed = await sdk.signTransaction(unsigned, privateKey, { type: 'RideRequest', fare: 5_000_000n });
-await sdk.submitTransaction(signed.rawTransaction);
+```bash
+npm install     # installs both workspaces and builds the SDK
+npm run dev     # runs the demo app on http://localhost:5173
+npm run build   # builds the SDK
+npm test        # runs both test suites
 ```
 
-Hash arguments (`listRideOffers`, `subscribeRideOffers`) accept the `0x`-prefixed form that `signTransaction` returns; the SDK normalizes them to the form the hub matches on.
+One `npm install` at the root covers everything. The demo app depends on the SDK as a workspace, so
+there is no separate SDK build step and no sibling checkout to keep in place.
 
-## Features
+## Why these are one repo
 
-- Client-side signing (private keys never sent to server)
-- Full ride lifecycle: request, offer, accept, pay, cancel
-- GraphQL queries and WebSocket subscriptions
-- TypeScript types
-
-## API methods
-
-| Category | Methods |
-|----------|---------|
-| Auth | Auto `generateToken` via `ensureAuth()` (signed challenge; needs the private key), `setPrivateKey`, `signAuthChallenge` |
-| Write | `createUnsignedRide*`, `signTransaction`, `submitTransaction` |
-| Read | `listRideRequests`, `listRideOffers`, `listActiveTrips`, `getAccountBalance`, … |
-| Live | `subscribeRideRequests`, `subscribeRideOffers`, `subscribeActiveTrips`, … |
-
-Full reference: https://docs.clutchprotocol.io/clutch-hub-sdk-js/api-reference
-
-## Security
-
-**Never expose private keys.** Client-side signing only. See [Security](https://docs.clutchprotocol.io/reference/security).
+They always were one unit, without git knowing it. The demo app depended on the SDK by relative
+path (`file:../clutch-hub-sdk-js`), rebuilt it before every `dev` and `build`, and its CI checked
+the SDK out beside itself to recreate the layout. Splitting them cost a cross-cutting change two
+pull requests and meant no CI job ever tested the two together.
 
 ## Releases
 
-Uses [semantic-release](https://semantic-release.gitbook.io/) with conventional commits.
+`packages/sdk` is versioned by [semantic-release](https://semantic-release.gitbook.io/) from
+[Conventional Commits](https://www.conventionalcommits.org/), on every push to `main` that touches
+it. Tags stay `vX.Y.Z` and continue the series that ran before the merge.
 
-**Created and maintained by [Mehran Mazhar](https://github.com/MehranMazhar)**
+A change under `apps/demo` alone does not cut an SDK release.

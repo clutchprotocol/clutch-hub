@@ -1,0 +1,164 @@
+# Builds and publishes the apps/demo image.
+#
+# Before the repos were merged this workflow checked THIS repo out beside the demo app to fake a
+# monorepo layout, and the Dockerfile copied two sibling directories. Both are gone: there is one
+# checkout and the build context is the workspace root.
+#
+# `packages/sdk/**` is in the paths filter on purpose. The demo bundles the SDK, so an SDK change
+# changes the image — and under the old two-repo split it could not trigger this build at all,
+# which meant the published image could lag the SDK indefinitely.
+name: Build and Push Docker Image (GHCR + Docker Hub)
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+    paths:
+      - 'apps/demo/**'
+      - 'packages/sdk/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-publish.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'apps/demo/**'
+      - 'packages/sdk/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-publish.yml'
+  workflow_dispatch:
+
+env:
+  GHCR_REGISTRY: ghcr.io
+  DH_REGISTRY: docker.io
+  GHCR_IMAGE: clutchprotocol/clutch-hub-demo-app
+  DH_IMAGE: 9194010019/clutch-hub-demo-app
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # The Docker build proves the app compiles. It does not run a line of the keystore's own checks,
+  # and those checks are mostly refusals -- wrong passphrase, altered ciphertext, an edited address
+  # -- which is exactly the class of failure that looks like success from the UI when it stops
+  # happening. So they gate the image rather than sit beside it.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      # One install for both workspaces. The SDK's `prepare` builds it as part of this.
+      - name: Install
+        run: npm ci
+      - name: Build the SDK
+        run: npm run build --workspace=clutch-hub-sdk-js
+      - name: Test the demo app
+        run: npm run test --workspace=clutch-hub-demo-app
+      - name: Test the SDK
+        run: npm run test --workspace=clutch-hub-sdk-js
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DH_REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE }}
+            ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+
+      - name: Build and push Docker image (both registries)
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/demo/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=http://localhost:3000
+
+      - name: Image digest
+        if: github.event_name != 'pull_request'
+        run: echo ${{ steps.build.outputs.digest }}
+
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
+  # Tell clutch-deploy to SSH-deploy stage (pull latest images + recreate). Requires org/repo secret
+  # CLUTCH_DEPLOY_DISPATCH_TOKEN: PAT with repo scope able to POST repository_dispatch to clutch-deploy.
+  trigger-stage-deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger deploy-stage in clutch-deploy
+        continue-on-error: true
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CLUTCH_DEPLOY_DISPATCH_TOKEN }}
+          repository: clutchprotocol/clutch-deploy
+          event-type: deploy-stage
+
+  update-description:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DH_IMAGE }}
+          readme-filepath: ./apps/demo/README.md

@@ -1,124 +1,50 @@
-# clutch-hub-sdk-js
+# clutch-hub — CLAUDE.md
 
-TypeScript client SDK for Clutch Protocol (npm: `clutch-hub-sdk-js`). Signs transactions
-client-side (secp256k1 + keccak-256 + RLP) and talks to the Hub API over GraphQL HTTP and
-graphql-ws subscriptions. See the parent `D:\source\clutch\CLAUDE.md` for the workspace overview.
+npm workspace holding the Clutch Hub SDK and the reference app that uses it. See the parent
+`D:\source\clutch\CLAUDE.md` for the workspace-wide architecture; this file covers this repo only.
 
-## Source Layout
+| Path | What | Notes |
+|---|---|---|
+| `packages/sdk` | `clutch-hub-sdk-js`, published to npm | TypeScript, `tsc` build, `node --test` |
+| `apps/demo` | `clutch-hub-demo-app`, published as a Docker image | React 19 + Vite, `"private": true` |
 
-Only four source files — the SDK is deliberately small:
+Each has its own `CLAUDE.md` with the detail.
 
-- `src/sdk.ts` — everything important: `ClutchHubSdk` class, JWT auth caching, signing/hashing,
-  RLP encoding (`encodeFunctionCall`), all GraphQL queries/mutations/subscriptions inline as
-  template strings. Also exports `stripHexPrefix`, `normalizeTxHashForRlp`,
-  `UnsignedTransaction`.
-- `src/subscriptions.ts` — `hubGraphqlWsUrl()` (HTTP base URL → `ws(s)://…/graphql/ws`),
-  `createHubSubscriptionClient()` (graphql-ws client: `lazy: false`, infinite retry, 10s keepAlive),
-  shared GraphQL field-selection constants (`RIDE_REQUEST_GQL_FIELDS` etc.), `SubscriptionHandlers<T>`.
-- `src/types.ts` — arg/result interfaces (`RideRequestArgs`, `AvailableActiveTrip`, `MapBounds`,
-  `Signature`, …).
-- `src/index.ts` — barrel re-exports. New public symbols must be reachable from here.
+## Commands — all from the repo root
 
-Tests live in `test/*.test.mjs` and use Node's built-in runner (`npm test` → `node --test test/`),
-no framework. They import from `dist/`, so `npm run build` first; the release workflow runs them
-after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` at the
-repo root are older ad-hoc manual scripts, not part of `npm test`.
+- `npm install` — installs both workspaces. The SDK's `prepare` builds it, so `dist/` exists after.
+- `npm run dev` — the demo app on 5173.
+- `npm run build` — the SDK. `npm run build:demo` for the app.
+- `npm test` — both suites.
 
-## Transaction Lifecycle (client side)
+**The repo's GitHub name is still `clutch-hub-sdk-js`.** The npm package name and the repo name do
+not have to match, and renaming the npm package would strand every existing consumer at the old
+name. Renaming the *repo* is safe whenever you want it — GitHub redirects the old URL.
 
-1. **Build unsigned**: `createUnsignedRideRequest/Offer/Acceptance/Pay/Cancel/RequestCancel` call
-   the corresponding Hub API mutation (after `ensureAuth`) and get back
-   `{ data, from, nonce }` (`UnsignedTransaction`).
-2. **Encode call data**: `encodeFunctionCall(data)` maps the function-call type to a nested array
-   `[tag, args]` for RLP. Tags must match the Rust node: RideRequest=1, RideOffer=2,
-   RideAcceptance=3, RidePay=4, RideCancel=5, RideRequestCancel=8 (6/7 reserved elsewhere).
-3. **Hash**: RLP-encode `[from (no 0x), nonce, callDataArray]`, keccak-256 it → `rawHashHex`.
-4. **Sign**: `signHash` does **not** sign the hash bytes directly — the Rust node verifies
-   `Keccak256(hash_string.as_utf8_bytes())`, so the SDK keccaks the *hex string's UTF-8 bytes*,
-   then `secp.signAsync`. Recovery id + 27 → `v`.
-5. **Encode signed**: RLP `[from, nonce, r, s, v, hash, callDataArray]` (all hex without 0x) →
-   `rawTransaction: '0x…'`.
-6. **Submit**: `submitTransaction(rawTransaction)` → `sendRawTransaction` mutation → tx hash.
+## Two things that are easy to break
 
-Signing quirks to preserve: floats (lat/lng) are encoded as IEEE-754 big-endian u64 bits via
-`float64ToUint64` (BigInt); tx-hash args go through `normalizeTxHashForRlp` (strips 0x *and*
-legacy JSON-string quoting); empty referrer encodes as `''`.
+**The paths filter in `.github/workflows/npm-publish.yml` is what stops a demo-app commit from
+publishing an SDK version.** semantic-release has no concept of paths: it counts every commit since
+the last tag and would happily cut `4.2.0` because the demo app got a `feat:`. If you widen that
+filter, you take the guard off.
 
-## Public API Surface (`ClutchHubSdk`)
+**semantic-release runs from the repo root, not from `packages/sdk`.** This is deliberate.
+`tagFormat` defaults to `v${version}`, which is the format of the existing `v1`..`v4` tags; running
+it inside the package (or adding `semantic-release-monorepo`) changes the format, semantic-release
+then finds no previous release, and the next publish is `1.0.0`. `pkgRoot` in `.releaserc.json` is
+what aims the npm plugin at the package instead.
 
-- **Constructor / identity**: `new ClutchHubSdk(apiUrl, publicKey, privateKey?, chainId?, options?)`
-  where `options.timeoutMs` bounds every hub HTTP request (default `DEFAULT_HTTP_TIMEOUT_MS`,
-  30 s; `0` disables). Hash arguments to `listRideOffers`/`subscribeRideOffers` go through
-  `normalizeTxHashForQuery` (strip `0x`, lowercase) because the hub matches them as exact
-  strings. `getPublicKey()`,
-  `setPrivateKey(privateKey)`, `isAuthenticated()`. The private key (constructor arg or
-  `setPrivateKey`) is required for token issuance — `generateToken` demands a signed
-  proof-of-key-ownership challenge. It is kept in a module-global map keyed by publicKey
-  (like the JWT cache) and never sent to the API.
-- **Auth (internal)**: `ensureAuth()` builds the challenge `clutch-auth:{publicKey}:{timestamp}`
-  (unix seconds), signs it via `signAuthChallenge` (Keccak-256 the message to a hex string, then
-  the usual `signHashHex` convention — see Transaction Lifecycle step 4), and calls the
-  `generateToken(publicKey, timestamp, signature)` mutation. The Hub API rejects timestamps more
-  than ±120s from server time. JWTs are cached in a **module-global** map keyed by publicKey with
-  30s expiry buffer and in-flight dedup, so multiple SDK instances share tokens; `ensureAuth`
-  throws if no cached token is valid and no private key was provided. Exported helpers:
-  `buildAuthChallengeMessage`, `authChallengeHashHex`, `signAuthChallenge` — these must stay
-  byte-for-byte in sync with `clutch-hub-api`'s `hub/auth.rs`.
-- **Unsigned tx builders**: `createUnsignedRideRequest/RideOffer/RideAcceptance/RidePay/RideCancel/RideRequestCancel`.
-- **Sign & submit**: `signTransaction(unsignedTx, privateKey)` → `{ r, s, v, rawTransaction, txHash }`;
-  `submitTransaction(rawTransaction)`.
-- **Queries**: `listRideRequests(bounds?)`, `listRideOffers(hash)`, `listActiveTrips`,
-  `listCompletedTrips`, `listRecentTrips`, `getAccountBalance(publicKey?)`.
-- **Subscriptions** (each returns a dispose function): `subscribeRideRequests`,
-  `subscribeRideOffers`, `subscribeActiveTrips`, `subscribeCompletedTrips`, `subscribeRecentTrips`,
-  `subscribeAccountBalance`. All multiplex over **one shared graphql-ws socket per
-  (hub URL, publicKey)**, refcounted in a module-global map; the last dispose closes the socket.
-  Always call the returned dispose function or sockets/refcounts leak.
-- **Misc**: `getGraphqlWsUrl()`.
+`@semantic-release/exec` regenerates the root `package-lock.json` after the version bump, because
+the lockfile records each workspace's version and `npm ci` refuses a lockfile that disagrees with
+`package.json`.
 
-## Adding a New Transaction Type
+## Gotchas carried over from the split
 
-1. Add the arg interface to `src/types.ts`; export lands via `src/index.ts` automatically.
-2. Add `createUnsignedXxx` in `src/sdk.ts` mirroring existing ones (inline mutation string,
-   `ensureAuth`, `executeGraphQL`).
-3. Add a `case` in `encodeFunctionCall` with the **same tag number and argument order as the Rust
-   node's FunctionCall enum** (`clutch-node`) — a mismatch produces valid-looking txs the node
-   rejects. Support both snake_case (`ride_offer_transaction_hash`) and camelCase arg keys, as the
-   Hub API has returned both shapes.
-4. Upstream first: node RPC → `clutch-hub-api` GraphQL mutation must exist before the SDK method
-   works. Then update `clutch-hub-demo-app` and `clutch-docs`.
-
-For a new query/subscription: add types + field constant (in `subscriptions.ts` if shared between
-query and subscription), then a `listXxx` using `executeGraphQL` and/or a `subscribeXxx` using
-`subscribeGraphqlListField` (list payloads) or the manual pattern in `subscribeAccountBalance`
-(scalar payloads).
-
-## Build & Release
-
-- `npm run build` = `tsc` → `dist/` (declarations included). `prepare` also builds, which is what
-  makes the `file:` install work. No lint or test scripts exist despite CONTRIBUTING.md mentioning them.
-- tsconfig: ES2020 target, `module: ESNext`, `strict: true`, DOM lib included (browser-first).
-- **semantic-release** on push to `main` (`.github/workflows/npm-publish.yml` + `.releaserc.json`):
-  Conventional Commits required. `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch,
-  `feat!:` or a `BREAKING CHANGE:` footer → major; `docs:`/`chore:`/`ci:`/`test:`/`build:`/`style:`
-  release nothing. Non-releasing pushes to `main` publish a `-canary.<sha>` build under the
-  `canary` dist-tag. A `beta` branch does prereleases. CHANGELOG.md and package.json version are
-  bot-committed (`chore(release): x.y.z [skip ci]`) — never bump the version by hand.
-- The demo app consumes this repo via `"clutch-hub-sdk-js": "file:../clutch-hub-sdk-js"`; its
-  `predev`/`prebuild` run `npm run build --prefix ../clutch-hub-sdk-js`. So SDK source changes
-  reach the demo app on its next `npm run dev` — but if Vite is already running you may need to
-  restart / clear `node_modules/.vite` to pick up the rebuilt dist.
-
-## Gotchas
-
-- **Browser + Node dual use**: `sdk.ts` imports `buffer` (npm polyfill) and assigns
-  `window.Buffer` if missing. Don't use Node-only APIs; keep DOM usage guarded by
-  `typeof window !== 'undefined'`.
-- `@noble/secp256k1` v2 hex parsers reject `0x` prefixes — always run keys/hashes through
-  `stripHexPrefix` before passing them to noble.
-- Auth state (JWT cache, in-flight dedup, shared WS clients) is module-global, not per-instance —
-  tests or multi-wallet apps share it by design.
-- WS subscriptions silently continue without a JWT if `generateToken` fails — including when no
-  private key was supplied for the wallet (public list subscriptions are allowed unauthenticated).
-- GraphQL operations are inline strings with hand-written TS result types — there is no codegen;
-  keep field constants and `types.ts` in sync with the Hub API schema manually.
+- `apps/demo/vite.config.js` aliases `clutch-hub-sdk-js` to `../../packages/sdk` and excludes it
+  from `optimizeDeps`. The alias points at the package directory, so `packages/sdk/dist/` must
+  exist — `npm install` or `npm run build` produces it.
+- The Docker build context is the **repo root**, not `apps/demo`: `docker build -f apps/demo/Dockerfile .`
+  The `.dockerignore` that applies is the root one.
+- `packages/sdk/package.json` has an explicit `files` field. Without it npm would pack whatever
+  happens to sit in that directory — before the merge the published tarball carried `.releaserc.json`,
+  the CI workflow, `CLAUDE.md` and three stray `test_rlp_fix*` scripts.
