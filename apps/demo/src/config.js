@@ -1,24 +1,15 @@
+import { chainIdForHost, apiUrlForHost } from "./chain-for-host.js";
+
 const host = typeof window !== "undefined" ? window.location.hostname : "";
 const port = typeof window !== "undefined" ? window.location.port : "";
 const protocol = typeof window !== "undefined" ? window.location.protocol : "http:";
 
-// Cloudflare / split hostnames:
-// - app on app-stage.<domain>
-// - API on api-stage.<domain>
-const cloudflareStageApiUrl = (() => {
-  if (host.startsWith("app-stage.")) {
-    const apiHost = host.replace(/^app-stage\./, "api-stage.");
-    return `${protocol}//${apiHost}`;
-  }
-
-  // Backwards compatibility (older deployments)
-  if (host.startsWith("stageweb.")) {
-    const apiHost = host.replace(/^stageweb\./, "stageapi.");
-    return `${protocol}//${apiHost}`;
-  }
-
-  return null;
-})();
+// Cloudflare / split hostnames, one rule per environment:
+//   app-stage.<domain>  ->  api-stage.<domain>   (testnet)
+//   app.<domain>        ->  api.<domain>         (mainnet)
+// The rules live in chain-for-host.js so they can be tested; config.js cannot be imported
+// under `node --test`, because `import.meta.env` does not exist there.
+const cloudflareStageApiUrl = apiUrlForHost(host, protocol);
 
 // Legacy docker mapping: demo on :81, API on :82 (same host).
 // e.g. http://localhost:81/ -> http://localhost:82/
@@ -63,10 +54,13 @@ export const API_URL =
  * challenge and as the `signTransaction` verification pin. See `ClutchHubSdk` constructor docs.
  */
 const viteChainId = import.meta.env.VITE_CHAIN_ID;
+// Hostname-derived, with the build-time value as an override, for the same reason API_URL is:
+// one image serves every deployment. Without this the published demo image carries 2077 baked
+// in, and a mainnet deployment would sign every transaction for the wrong chain.
 export const CHAIN_ID =
   typeof viteChainId === "string" && viteChainId.trim().length > 0
     ? Number(viteChainId)
-    : 2077;
+    : chainIdForHost(host);
 
 /** Hub API base without trailing slash */
 export const HUB_API_BASE_URL = API_URL.replace(/\/$/, "");
