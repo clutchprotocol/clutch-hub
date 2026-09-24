@@ -42,8 +42,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # rust-toolchain.toml pins 1.86.0; cargo honours it because it runs from services/hub-api.
       - uses: dtolnay/rust-toolchain@stable
+
+      # rust-toolchain.toml in services/hub-api pins 1.86.0. This step runs from there, like
+      # cargo test does, so the log shows which compiler runs the tests.
+      - name: Rust version
+        run: rustc --version
 
       - uses: Swatinem/rust-cache@v2
         with:
