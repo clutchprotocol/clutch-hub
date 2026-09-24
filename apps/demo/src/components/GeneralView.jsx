@@ -11,8 +11,8 @@ import {
 const REPOS = [
   { name: 'Clutch Node', desc: 'Blockchain core with Aura consensus.', url: 'https://github.com/clutchprotocol/clutch-node', icon: 'hub' },
   { name: 'Clutch Hub API', desc: 'Bridge between apps and the node. GraphQL and REST.', url: 'https://github.com/clutchprotocol/clutch-hub-api', icon: 'api' },
-  { name: 'Clutch Hub SDK', desc: 'Client-side transaction signing and encoding.', url: 'https://github.com/clutchprotocol/clutch-hub-sdk-js', icon: 'code' },
-  { name: 'Demo App', desc: 'Passenger, driver, and explorer views.', url: 'https://github.com/clutchprotocol/clutch-hub-demo-app', icon: 'apps' },
+  { name: 'Clutch Hub SDK', desc: 'Client-side transaction signing and encoding.', url: 'https://github.com/clutchprotocol/clutch-hub/tree/main/packages/sdk', icon: 'code' },
+  { name: 'Demo App', desc: 'Passenger, driver, and explorer views.', url: 'https://github.com/clutchprotocol/clutch-hub/tree/main/apps/demo', icon: 'apps' },
 ];
 
 const DEFAULT_STAGE_NODE_ENDPOINTS = [

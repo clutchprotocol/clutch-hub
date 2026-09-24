@@ -17,9 +17,11 @@ Each has its own `CLAUDE.md` with the detail.
 - `npm run build` — the SDK. `npm run build:demo` for the app.
 - `npm test` — both suites.
 
-**The repo's GitHub name is still `clutch-hub-sdk-js`.** The npm package name and the repo name do
-not have to match, and renaming the npm package would strand every existing consumer at the old
-name. Renaming the *repo* is safe whenever you want it — GitHub redirects the old URL.
+**The repo is `clutchprotocol/clutch-hub` since 2026-09-24, and the npm package is still
+`clutch-hub-sdk-js`.** The two names do not have to match, and renaming the npm package would strand
+every existing consumer at the old name. GitHub redirects the old repo URL. One thing did have to
+change with the rename: `repository.url` in `packages/sdk/package.json`. Publishing uses npm
+provenance, and npm refuses a publish when that URL does not match the repo that publishes.
 
 ## Three things that are easy to break
 

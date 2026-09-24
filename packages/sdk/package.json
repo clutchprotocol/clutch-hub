@@ -26,13 +26,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/clutchprotocol/clutch-hub-sdk-js.git",
+    "url": "https://github.com/clutchprotocol/clutch-hub.git",
     "directory": "packages/sdk"
   },
   "bugs": {
-    "url": "https://github.com/clutchprotocol/clutch-hub-sdk-js/issues"
+    "url": "https://github.com/clutchprotocol/clutch-hub/issues"
   },
-  "homepage": "https://github.com/clutchprotocol/clutch-hub-sdk-js/tree/main/packages/sdk#readme",
+  "homepage": "https://github.com/clutchprotocol/clutch-hub/tree/main/packages/sdk#readme",
   "dependencies": {
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^2.2.3",

@@ -36,7 +36,7 @@ test('release notes list only the commits that touch packages/sdk', async () => 
     ],
     lastRelease: { gitTag: 'v4.2.1', version: '4.2.1' },
     nextRelease: { gitTag: 'v4.2.2', version: '4.2.2' },
-    options: { repositoryUrl: 'https://github.com/clutchprotocol/clutch-hub-sdk-js.git' },
+    options: { repositoryUrl: 'https://github.com/clutchprotocol/clutch-hub.git' },
   });
   assert.match(text, /probe in the sdk/);
   assert.doesNotMatch(text, /probe in the demo/);
