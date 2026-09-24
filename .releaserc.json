@@ -8,7 +8,7 @@
   ],
   "plugins": [
     [
-      "@semantic-release/commit-analyzer",
+      "./release/sdk-commits.mjs",
       {
         "preset": "conventionalcommits",
         "releaseRules": [
@@ -51,14 +51,12 @@
           {
             "type": "chore",
             "release": false
+          },
+          {
+            "breaking": true,
+            "release": "major"
           }
         ]
-      }
-    ],
-    [
-      "@semantic-release/release-notes-generator",
-      {
-        "preset": "conventionalcommits"
       }
     ],
     [

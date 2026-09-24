@@ -113,8 +113,9 @@ query and subscription), then a `listXxx` using `executeGraphQL` and/or a `subsc
 - **It runs from the repo root, not from here**, with `pkgRoot: packages/sdk`. That keeps
   `tagFormat` at `v${version}`, which is what the existing `v1`..`v4` tags use. See the root
   `CLAUDE.md` — getting this wrong restarts versioning at 1.0.0.
-- **A commit that touches only `apps/demo` does not release**, because `npm-publish.yml` has a
-  `paths:` filter. semantic-release has no concept of paths and would otherwise count that commit.
+- **Only commits that touch `packages/sdk` count toward its version and release notes.**
+  `release/sdk-commits.mjs` filters them for semantic-release, which otherwise counts every commit
+  in the repo. The `paths:` filter in `npm-publish.yml` only decides when the job runs.
 - The demo app consumes this package as a **workspace** (`"clutch-hub-sdk-js": "*"`), and
   `apps/demo/vite.config.js` aliases the import to `../../packages/sdk`. So SDK source changes
   reach the demo app on its next `npm run dev` — but if Vite is already running you may need to
