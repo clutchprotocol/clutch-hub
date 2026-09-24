@@ -21,7 +21,13 @@ Each has its own `CLAUDE.md` with the detail.
 not have to match, and renaming the npm package would strand every existing consumer at the old
 name. Renaming the *repo* is safe whenever you want it — GitHub redirects the old URL.
 
-## Two things that are easy to break
+## Three things that are easy to break
+
+**`releaseRules` in `.releaserc.json` must keep `{ "breaking": true, "release": "major" }`.**
+commit-analyzer uses its default rules only when no custom rule matches a commit, and the custom
+`feat` rule always matches. So without that entry, a `feat!:` commit ships as a minor version. That
+happened to 4.2.0, which contains `feat!: adopt SDK v3`. The first test in
+`release/sdk-commits.test.mjs` fails if the entry goes missing.
 
 **`release/sdk-commits.mjs` is what stops a demo-app commit from deciding an SDK version.**
 semantic-release has no concept of paths: it counts every commit since the last tag, from every
