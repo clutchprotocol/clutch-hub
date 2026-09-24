@@ -1,0 +1,24 @@
+# Clutch Hub API - Development (API only)
+# For full stack (node + API), use https://github.com/clutchprotocol/clutch-deploy
+
+services:
+  clutch-hub-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clutch-hub-api-container
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - ./config:/app/config:ro

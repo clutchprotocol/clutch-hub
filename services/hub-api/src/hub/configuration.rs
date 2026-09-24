@@ -1,0 +1,158 @@
+use config::{Config, ConfigError, Environment, File};
+use dotenv::dotenv;
+use serde::Deserialize;
+use tracing::info;
+
+fn default_allowed_origins() -> String {
+    "*".to_string()
+}
+
+#[derive(Deserialize, Clone)]
+pub struct AppConfig {
+    pub log_level: String,
+    pub serve_metric_addr: String,
+    pub seq_url: String,
+    pub seq_api_key: String,
+    pub clutch_node_ws_url: String,
+    pub ws_addr: String,
+    pub jwt_secret: String,
+    pub jwt_expiration_hours: u64,
+    /// CORS: `"*"` or a comma-separated list of allowed origins (e.g.
+    /// `https://app.example.com,https://app-stage.example.com`).
+    #[serde(default = "default_allowed_origins")]
+    pub allowed_origins: String,
+    /// Default referrer address for RideRequest when the client omits `referrer` (empty = none).
+    #[serde(default)]
+    pub default_ride_request_referrer: String,
+    /// Default referrer address for RideOffer when the client omits `referrer` (empty = none).
+    #[serde(default)]
+    pub default_ride_offer_referrer: String,
+    /// `generateToken` requests per minute for one claimed `publicKey`.
+    ///
+    /// Catches a client stuck in a retry loop, and stops one caller eating the whole global
+    /// allowance below. Ten is far above the SDK's behaviour: it caches JWTs per public key with
+    /// a 30-second expiry buffer and dedupes in-flight requests, so a healthy client asks about
+    /// once per token lifetime.
+    #[serde(default = "default_token_rate_limit_per_minute")]
+    pub token_rate_limit_per_minute: u32,
+    /// `generateToken` requests per minute across all callers.
+    ///
+    /// This is the bound that actually matters. `publicKey` is a caller-supplied string, so the
+    /// per-key limit above is bypassed by varying it; only a global cap bounds how much
+    /// signature recovery an unauthenticated flood can force. See `hub::ratelimit`.
+    #[serde(default = "default_token_rate_limit_global_per_minute")]
+    pub token_rate_limit_global_per_minute: u32,
+}
+
+fn default_token_rate_limit_per_minute() -> u32 {
+    10
+}
+
+fn default_token_rate_limit_global_per_minute() -> u32 {
+    120
+}
+
+// Hand-written so secrets never get dumped into logs/Seq via the startup info! below.
+impl std::fmt::Debug for AppConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AppConfig")
+            .field("log_level", &self.log_level)
+            .field("serve_metric_addr", &self.serve_metric_addr)
+            .field("seq_url", &self.seq_url)
+            .field("seq_api_key", &"[redacted]")
+            .field("clutch_node_ws_url", &self.clutch_node_ws_url)
+            .field("ws_addr", &self.ws_addr)
+            .field("jwt_secret", &"[redacted]")
+            .field("jwt_expiration_hours", &self.jwt_expiration_hours)
+            .field("allowed_origins", &self.allowed_origins)
+            .field(
+                "default_ride_request_referrer",
+                &self.default_ride_request_referrer,
+            )
+            .field(
+                "default_ride_offer_referrer",
+                &self.default_ride_offer_referrer,
+            )
+            .finish()
+    }
+}
+
+/// Markers of placeholder values shipped in example/dev configs (this repo's own
+/// env.example and clutch-deploy's config both ship one) — matched as substrings,
+/// case-insensitively, so a copy-pasted-but-unedited placeholder is still caught even
+/// if it's padded to pass the length check (e.g. "change-me-to-a-long-random-secret").
+const WEAK_JWT_SECRET_MARKERS: &[&str] = &[
+    "change-me",
+    "changeme",
+    "your-secret",
+    "your-super-secret",
+    "secret-here",
+    "placeholder",
+];
+const WEAK_JWT_SECRETS_EXACT: &[&str] = &["secret", "password", "changeme"];
+
+const MIN_JWT_SECRET_LEN: usize = 32;
+
+fn validate_jwt_secret(secret: &str) -> Result<(), String> {
+    if secret.trim().is_empty() {
+        return Err("jwt_secret is empty — set APP_JWT_SECRET".to_string());
+    }
+    let lower = secret.to_lowercase();
+    if WEAK_JWT_SECRETS_EXACT.contains(&lower.as_str())
+        || WEAK_JWT_SECRET_MARKERS.iter().any(|m| lower.contains(m))
+    {
+        return Err(
+            "jwt_secret is set to a known placeholder value — set a real secret via APP_JWT_SECRET"
+                .to_string(),
+        );
+    }
+    if secret.len() < MIN_JWT_SECRET_LEN {
+        return Err(format!(
+            "jwt_secret is too short ({} chars, need >= {}) to be secure",
+            secret.len(),
+            MIN_JWT_SECRET_LEN
+        ));
+    }
+    Ok(())
+}
+
+impl AppConfig {
+    fn from_env(env: &str) -> Result<Self, ConfigError> {
+        dotenv().ok();
+        let file_path = format!("config/{}.toml", env);
+        let builder = Config::builder()
+            .add_source(File::with_name(&file_path))
+            .add_source(Environment::with_prefix("APP"));
+
+        builder.build()?.try_deserialize::<Self>()
+    }
+
+    pub fn load_configuration(env: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let config = AppConfig::from_env(env)?;
+        validate_jwt_secret(&config.jwt_secret)
+            .map_err(|e| format!("invalid configuration: {}", e))?;
+        info!("Loaded configuration from env {:?}: {:?}", env, config);
+        Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_jwt_secret;
+
+    #[test]
+    fn rejects_empty_and_placeholder_secrets() {
+        assert!(validate_jwt_secret("").is_err());
+        assert!(validate_jwt_secret("change-me-in-production").is_err());
+        assert!(validate_jwt_secret("Change-Me-In-Production").is_err());
+        assert!(validate_jwt_secret("your-super-secret-jwt-key-here").is_err());
+        assert!(validate_jwt_secret("short").is_err());
+        // Padded-but-unedited placeholders must not slip through on length alone.
+        assert!(validate_jwt_secret("change-me-to-a-long-random-secret").is_err());
+    }
+
+    #[test]
+    fn accepts_long_random_looking_secret() {
+        assert!(validate_jwt_secret("iP8BoK3dJfTQGz5UyXq9NwL7e0vCmAhR6S2YxE1ZpDt4").is_ok());
+    }
+}

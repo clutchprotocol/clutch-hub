@@ -1,12 +1,19 @@
 # clutch-hub — CLAUDE.md
 
-npm workspace holding the Clutch Hub SDK and the reference app that uses it. See the parent
-`D:\source\clutch\CLAUDE.md` for the workspace-wide architecture; this file covers this repo only.
+The Clutch Hub: an npm workspace holding the SDK and the reference app that uses it, plus the Hub
+API in `services/hub-api`. See the parent `D:\source\clutch\CLAUDE.md` for the workspace-wide
+architecture; this file covers this repo only.
 
 | Path | What | Notes |
 |---|---|---|
 | `packages/sdk` | `clutch-hub-sdk-js`, published to npm | TypeScript, `tsc` build, `node --test` |
 | `apps/demo` | `clutch-hub-demo-app`, published as a Docker image | React 19 + Vite, `"private": true` |
+| `services/hub-api` | `clutch-hub-api`, published as a Docker image | Rust 1.86. Not an npm workspace: run cargo from this folder |
+
+`services/hub-api` came from `clutchprotocol/clutch-hub-api` on 2026-09-24, with its 112 commits,
+by `git subtree add`. Its CI is `.github/workflows/hub-api-image.yml` and `hub-api-test.yml`.
+Its history never touches `packages/sdk`, so `release/sdk-commits.mjs` keeps it out of SDK
+releases. Merge a pull request that brings in history with a merge commit, never a squash.
 
 Each has its own `CLAUDE.md` with the detail.
 

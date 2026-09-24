@@ -1,11 +1,13 @@
 # Clutch Hub
 
-The Clutch Hub JavaScript SDK and the reference app built on it, in one npm workspace.
+The Clutch Hub: the Hub API, the JavaScript SDK that talks to it, and the reference app built on
+the SDK. The SDK and the app are one npm workspace; the API is a Rust service beside them.
 
 | Path | What it is | Published as |
 |---|---|---|
 | [`packages/sdk`](packages/sdk) | The SDK: client-side signing, GraphQL queries and subscriptions | npm — [`clutch-hub-sdk-js`](https://www.npmjs.com/package/clutch-hub-sdk-js) |
 | [`apps/demo`](apps/demo) | Reference passenger/driver UI, React 19 + Vite | Docker image `clutchprotocol/clutch-hub-demo-app`. `"private": true`, never published to npm |
+| [`services/hub-api`](services/hub-api) | The Hub API: GraphQL bridge between apps and clutch-node, JWT auth. Rust, Actix-web + async-graphql | Docker image `clutchprotocol/clutch-hub-api` |
 
 ## Using the SDK in your own app
 
@@ -27,8 +29,20 @@ npm run build   # builds the SDK
 npm test        # runs both test suites
 ```
 
-One `npm install` at the root covers everything. The demo app depends on the SDK as a workspace, so
-there is no separate SDK build step and no sibling checkout to keep in place.
+One `npm install` at the root covers the SDK and the demo app. The demo app depends on the SDK as a
+workspace, so there is no separate SDK build step and no sibling checkout to keep in place.
+
+The Hub API is not part of the npm workspace. Run cargo from its folder:
+
+```bash
+cd services/hub-api
+cargo run       # loads config/default.toml, serves on http://localhost:3000
+cargo test
+```
+
+`services/hub-api` came from [clutch-hub-api](https://github.com/clutchprotocol/clutch-hub-api) on
+2026-09-24, with its history. Its commits never touch `packages/sdk`, so they never change the
+SDK's version.
 
 ## Why these are one repo
 

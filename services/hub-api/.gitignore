@@ -1,0 +1,25 @@
+# Binaries for programs and projects
+/target/
+
+# If you have generated documentation, you can ignore that too.
+/docs/
+
+# Note: Cargo.lock is NOT ignored for applications (like this one)
+# It should be committed to ensure reproducible builds
+
+/*.log
+node_modules/
+
+# Ignore IDE/editor specific files
+.idea/
+.vscode/
+*.swp
+
+# Ignore MacOS-specific files
+.DS_Store
+
+# Ignore environment variable files (if any)
+.env
+
+# Temporary Cargo registry used for clean builds
+/.cargo-temp/
