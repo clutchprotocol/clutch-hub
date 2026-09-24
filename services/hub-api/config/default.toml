@@ -1,0 +1,17 @@
+# Ports match the Docker/deploy setup (clutch-deploy/config/api/default.toml):
+# GraphQL/HTTP on 3000, Prometheus metrics on 9090.
+serve_metric_enabled = true
+serve_metric_addr = "0.0.0.0:9090"
+ws_addr = "0.0.0.0:3000"
+clutch_node_ws_url = "ws://127.0.0.1:8081"
+log_level = "info"
+seq_url = "http://127.0.0.1:5341"
+seq_api_key = "FZii3D6ILDI38a0oIeDL"
+jwt_secret = "iP8BoK3dJfTQGz5UyXq9NwL7e0vCmAhR6S2YxE1ZpDt4"
+jwt_expiration_hours = 6
+# "*" for local dev; clutch-deploy overrides via APP_ALLOWED_ORIGINS for staging/production.
+allowed_origins = "*"
+
+# App-developer referrers injected by Hub API (clients must not pass referrer).
+default_ride_request_referrer = "0x0912514c7cc3eec2b2dab4e1d150c4b5eaee5a6f"
+default_ride_offer_referrer = "0x0912514c7cc3eec2b2dab4e1d150c4b5eaee5a6f"
