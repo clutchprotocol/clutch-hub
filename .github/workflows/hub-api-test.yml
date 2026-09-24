@@ -1,0 +1,53 @@
+# Runs the Hub API's test suite.
+#
+# This was clutchprotocol/clutch-hub-api's test.yml before the API moved into this repo on
+# 2026-09-24. It now runs only when the API or this file changes, and it runs cargo from
+# services/hub-api, where rust-toolchain.toml pins 1.86.0.
+#
+# `hub-api-image.yml` builds the release binary, which proves the crate compiles but never
+# compiles `#[cfg(test)]` code and never runs a test. This job covers proof-of-key-ownership
+# verification, the cross-language SDK auth fixtures, and JWT secret validation: the pieces that
+# decide who gets a token at all.
+#
+# No services block. Unlike clutch-treasury there is no database here; every test is in-process.
+
+name: "Hub API: test"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/hub-api/**'
+      - '.github/workflows/hub-api-test.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/hub-api/**'
+      - '.github/workflows/hub-api-test.yml'
+  workflow_dispatch:
+
+jobs:
+  hub-api-test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/hub-api
+
+    env:
+      # AppConfig::load rejects empty and placeholder JWT secrets, so anything constructing a
+      # config needs a real-looking one. Random, and only ever used by this rig.
+      APP_JWT_SECRET: "iP8BoK3dJfTQGz5UyXq9NwL7e0vCmAhR6S2YxE1ZpDt4"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins 1.86.0; cargo honours it because it runs from services/hub-api.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/hub-api
+
+      - name: cargo test
+        run: cargo test

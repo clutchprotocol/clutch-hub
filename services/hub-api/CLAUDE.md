@@ -1,5 +1,10 @@
 # clutch-hub-api
 
+**This crate lives at `services/hub-api` in `clutchprotocol/clutch-hub` since 2026-09-24.** It was
+the `clutchprotocol/clutch-hub-api` repo; its history came with it. Run cargo from this folder. Its
+CI is `.github/workflows/hub-api-image.yml` and `hub-api-test.yml` at the repo root. The image name
+is still `ghcr.io/clutchprotocol/clutch-hub-api`.
+
 Rust GraphQL bridge between client apps and clutch-node. Actix-web serves HTTP/WS; async-graphql defines the schema; a persistent WebSocket JSON-RPC client talks to the node. See the parent `D:\source\clutch\CLAUDE.md` for the multi-repo picture — this file covers internals only.
 
 ## Commands

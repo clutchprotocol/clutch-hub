@@ -1,23 +1,30 @@
-name: Build and Push Docker Image (GHCR + Docker Hub)
+# Builds the Hub API image and pushes it to GHCR as ghcr.io/clutchprotocol/clutch-hub-api.
+#
+# The Hub API moved into this repo on 2026-09-24, with its history, from clutchprotocol/clutch-hub-api.
+# This file was that repo's docker-publish.yml. What changed in the move:
+# - every path is under services/hub-api, and so is the Docker build context;
+# - the `tags: v*` trigger is gone. In this repo those tags belong to the SDK's npm releases, so
+#   every SDK release would have rebuilt the API image and tagged it with an SDK version;
+# - the build cache has its own scope, so it does not overwrite the demo image's cache.
+# The image name is unchanged, so clutch-deploy pulls the same image as before.
+name: "Hub API: build and push image"
 
 on:
   push:
     branches: [ main ]
-    tags:
-      - 'v*'
     paths:
-      - 'src/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'Dockerfile'
-      - '.github/workflows/docker-publish.yml'
+      - 'services/hub-api/src/**'
+      - 'services/hub-api/Cargo.toml'
+      - 'services/hub-api/Cargo.lock'
+      - 'services/hub-api/Dockerfile'
+      - '.github/workflows/hub-api-image.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'Dockerfile'
+      - 'services/hub-api/src/**'
+      - 'services/hub-api/Cargo.toml'
+      - 'services/hub-api/Cargo.lock'
+      - 'services/hub-api/Dockerfile'
   workflow_dispatch:
 
 env:
@@ -29,7 +36,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  hub-api-image:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +49,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login GHCR
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -60,20 +66,19 @@ jobs:
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=tag
 
-      - name: Build and push Docker image (both registries)
+      - name: Build and push Docker image
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: services/hub-api
+          file: services/hub-api/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=hub-api
+          cache-to: type=gha,mode=max,scope=hub-api
           build-args: |
             RUST_VERSION=1.86
 
@@ -89,8 +94,8 @@ jobs:
   # This job used to carry `continue-on-error: true`. With the secret missing it failed, the run
   # still reported green, and stage quietly kept serving the previous image. A deploy that does
   # not happen must not report success — see clutch-deploy/docs/ALERTING.md on that failure shape.
-  trigger-stage-deploy:
-    needs: build-and-push
+  hub-api-trigger-stage-deploy:
+    needs: hub-api-image
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
 
@@ -119,5 +124,3 @@ jobs:
         run: |
           echo "Dispatched deploy-stage to clutchprotocol/clutch-deploy."
           echo "That deploy is a separate run with its own result. This job only proves the request was accepted."
-
-
