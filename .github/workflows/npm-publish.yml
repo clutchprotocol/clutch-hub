@@ -1,8 +1,10 @@
 # Publishes packages/sdk to npm as `clutch-hub-sdk-js`.
 #
 # This repo also holds apps/demo, which is `"private": true` and can never be published. The
-# `paths:` filter below is the thing that keeps a demo-only change from cutting an SDK release:
-# semantic-release itself has no concept of paths and would count every commit since the last tag.
+# `paths:` filter below only decides when this workflow runs. It does not decide which commits
+# count: semantic-release reads every commit since the last tag, from every folder. That is the job
+# of release/sdk-commits.mjs, which gives the commit analyzer and the release notes only the commits
+# that touch packages/sdk. release-dry-run.yml shows what a branch would release before it merges.
 #
 # semantic-release runs from the REPO ROOT, not from packages/sdk, so that `tagFormat` stays at its
 # default `v${version}` and the existing v1..v4 tags keep counting. `pkgRoot` in .releaserc.json is
@@ -19,6 +21,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.releaserc.json'
+      - 'release/**'
       - '.github/workflows/npm-publish.yml'
     tags:
       - 'v*'

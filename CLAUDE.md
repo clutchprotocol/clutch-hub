@@ -23,10 +23,13 @@ name. Renaming the *repo* is safe whenever you want it — GitHub redirects the 
 
 ## Two things that are easy to break
 
-**The paths filter in `.github/workflows/npm-publish.yml` is what stops a demo-app commit from
-publishing an SDK version.** semantic-release has no concept of paths: it counts every commit since
-the last tag and would happily cut `4.2.0` because the demo app got a `feat:`. If you widen that
-filter, you take the guard off.
+**`release/sdk-commits.mjs` is what stops a demo-app commit from deciding an SDK version.**
+semantic-release has no concept of paths: it counts every commit since the last tag, from every
+folder. The `paths:` filter in `.github/workflows/npm-publish.yml` only decides when the release
+job runs, so it was never a guard. That is why the 4.2.0 notes list the whole demo history. The
+plugin gives the commit analyzer and the notes generator only the commits that touch
+`packages/sdk`, and `release/sdk-commits.test.mjs` fails if it stops doing that. Before you change
+the release setup, push a branch and read its "Release dry run" check.
 
 **semantic-release runs from the repo root, not from `packages/sdk`.** This is deliberate.
 `tagFormat` defaults to `v${version}`, which is the format of the existing `v1`..`v4` tags; running
