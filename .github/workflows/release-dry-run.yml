@@ -18,6 +18,7 @@ on:
       - 'packages/sdk/**'
       - 'release/**'
       - '.releaserc.json'
+      - '.github/workflows/npm-publish.yml'
       - '.github/workflows/release-dry-run.yml'
   workflow_dispatch:
 

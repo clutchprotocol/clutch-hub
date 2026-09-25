@@ -74,7 +74,8 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "npm install --package-lock-only --ignore-scripts"
+        "prepareCmd": "npm install --package-lock-only --ignore-scripts",
+        "successCmd": "touch .semantic-release-released"
       }
     ],
     [
