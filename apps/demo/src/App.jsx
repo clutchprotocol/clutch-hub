@@ -37,9 +37,9 @@ function App() {
   const [passengerViewTab, setPassengerViewTab] = useState(null);
   const [driverViewTab, setDriverViewTab] = useState(null);
   const [walletCopied, setWalletCopied] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [backupOpen, setBackupOpen] = useState(false);
+  // One Wallet panel with three tabs (top up, withdraw, back up) replaced three panels.
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletTab, setWalletTab] = useState('wallet-topup');
 
 
   const handleCopyWalletAddress = async () => {
@@ -221,37 +221,61 @@ function App() {
         </div>
       </OverlayPanel>
 
+      {/* Each tab shows what its own panel showed before. Deposit and withdraw get `open` only
+          while their tab is visible: DepositPanel fetches the deposit address only while open,
+          and opening it marks that address hot for the orchestrator's poller, so opening the
+          wallet on another tab must not count as opening the deposit view. */}
       <OverlayPanel
-        open={depositOpen}
-        title="Top up with USDT"
-        onClose={() => setDepositOpen(false)}
+        open={walletOpen}
+        title="Wallet"
+        onClose={() => setWalletOpen(false)}
       >
-        <DepositPanel
-          userProfile={userProfile}
-          open={depositOpen}
+        <ExplorerTabs
+          tabs={[
+            { id: 'wallet-topup', label: 'Top up' },
+            { id: 'wallet-withdraw', label: 'Withdraw' },
+            { id: 'wallet-backup', label: 'Back up' },
+          ]}
+          activeTab={walletTab}
+          onTabChange={setWalletTab}
+          showCounts={false}
         />
-      </OverlayPanel>
-
-      <OverlayPanel
-        open={withdrawOpen}
-        title="Withdraw to USDT"
-        onClose={() => setWithdrawOpen(false)}
-      >
-        <WithdrawPanel
-          userProfile={userProfile}
-          open={withdrawOpen}
-        />
+        <div
+          role="tabpanel"
+          id="panel-wallet-topup"
+          aria-labelledby="tab-wallet-topup"
+          hidden={walletTab !== 'wallet-topup'}
+          style={{ display: walletTab === 'wallet-topup' ? 'block' : 'none' }}
+        >
+          <DepositPanel
+            userProfile={userProfile}
+            open={walletOpen && walletTab === 'wallet-topup'}
+          />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-wallet-withdraw"
+          aria-labelledby="tab-wallet-withdraw"
+          hidden={walletTab !== 'wallet-withdraw'}
+          style={{ display: walletTab === 'wallet-withdraw' ? 'block' : 'none' }}
+        >
+          <WithdrawPanel
+            userProfile={userProfile}
+            open={walletOpen && walletTab === 'wallet-withdraw'}
+          />
+        </div>
+        <div
+          role="tabpanel"
+          id="panel-wallet-backup"
+          aria-labelledby="tab-wallet-backup"
+          hidden={walletTab !== 'wallet-backup'}
+          style={{ display: walletTab === 'wallet-backup' ? 'block' : 'none' }}
+        >
+          <WalletBackupExport role={mode} userProfile={userProfile} />
+        </div>
       </OverlayPanel>
 
       <UpdatePrompt />
-
-      <OverlayPanel
-        open={backupOpen}
-        title="Back up wallet"
-        onClose={() => setBackupOpen(false)}
-      >
-        <WalletBackupExport role={mode} userProfile={userProfile} />
-      </OverlayPanel>
 
       <nav className="bottom-nav" aria-label="App navigation">
         <button
@@ -362,34 +386,11 @@ function App() {
                     className="btn-primary"
                     onClick={() => {
                       setMenuOpen(false);
-                      setDepositOpen(true);
+                      setWalletTab('wallet-topup');
+                      setWalletOpen(true);
                     }}
                   >
-                    Top up with USDT
-                  </button>
-                )}
-                {userProfile.publicKey && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setWithdrawOpen(true);
-                    }}
-                  >
-                    Withdraw to USDT
-                  </button>
-                )}
-                {userProfile.publicKey && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setBackupOpen(true);
-                    }}
-                  >
-                    Back up wallet
+                    Wallet
                   </button>
                 )}
                 {/* A button, not a link, so it matches the actions above without new CSS. The
