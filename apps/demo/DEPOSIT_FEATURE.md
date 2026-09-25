@@ -6,7 +6,7 @@ Client + plumbing for paying testnet USDT and receiving CLT. Backend (`payment-o
 
 `src/components/DepositPanel.jsx` — one form + result view. States: amount input → `POST /api/v1/deposits` → pay-address/exact-amount display with a 5s poll of `GET /api/v1/deposits/:id` → status chip through to `credited`/`expired`/`failed`/`needs_manual`.
 
-Mounted in `src/App.jsx` as an `OverlayPanel` (`open={depositOpen}`), the same always-mounted/`hidden`-toggled pattern already used for the "About & network" overlay. Opened via a new "Top up with USDT" button placed in the hamburger menu, next to the existing `BalanceDisplay`/faucet row — this is where "money in" already lives in the app, so the deposit flow joins it rather than getting a new nav location. On `credited`, it bumps the same `walletRefresh` counter the faucet uses, so the balance display refreshes the normal way.
+Mounted in `src/App.jsx` as the "Top up" tab of the Wallet panel (an `OverlayPanel` with `ExplorerTabs`, always mounted and `hidden`-toggled like the app's other tabbed panel). Its `open` prop is true only while that tab is visible. The menu's "Wallet" button opens the panel on this tab.
 
 Deposits never sign an on-chain transaction (unlike the withdraw/Burn flow, which is out of scope here) — CLT arrives via the treasury's own mint bridge. The only reason a private key is needed at all is that `sdk.getAuthHeaders()` calls `generateToken` internally, which requires a signed proof-of-key-ownership challenge; this hits the same "private key before the first authenticated call" trap CLAUDE.md documents for `createUnsigned*`, so the same `usePrivateKeyRequest()` modal pattern is reused.
 

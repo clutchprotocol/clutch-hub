@@ -13,7 +13,6 @@ Reference passenger/driver UI for Clutch Protocol. React 19 + Vite 6 + react-lea
 
 Env vars (Vite, must be prefixed `VITE_`):
 - `VITE_API_URL` — Hub API base (default `http://localhost:3000`). Overridden at runtime by hostname sniffing in `src/config.js`: `app-stage.*` → `api-stage.*` (and legacy `stageweb.*`/port-81 mappings) win over the env var.
-- `VITE_PUBLIC_NODE_ENDPOINTS` — optional comma-separated node WS URLs, display-only on the About tab (browser never talks to nodes directly).
 
 ## Source layout (`src/`)
 
@@ -33,7 +32,7 @@ Env vars (Vite, must be prefixed `VITE_`):
   - `PassengerView.jsx` — largest file: map-based ride builder, open requests + offers, active/recent trips.
   - `DriverView.jsx` — available ride requests, make-offer form, driver trips.
   - `ActiveTripCard.jsx` — shared trip card with pay (passenger-only UI) and cancel (either party) actions.
-  - `CompletedTripCard.jsx`, `RideForm.jsx`, `BalanceDisplay.jsx` (balance subscription), `UserProfile.jsx` (generate/import wallet), `TransactionHistory.jsx` / `TransactionHistoryPage.jsx` (local tx log), `GeneralView.jsx` (About/endpoints), `NetworkView.jsx` (network-wide explorer), `ExplorerTabs.jsx`, `MapFitBounds.jsx`, `MapLegend.jsx`, `Icon.jsx`.
+  - `CompletedTripCard.jsx`, `RideForm.jsx`, `BalanceDisplay.jsx` (balance subscription), `UserProfile.jsx` (generate/import wallet), `TransactionHistory.jsx` / `TransactionHistoryPage.jsx` (local tx log), `NetworkView.jsx` (network-wide explorer), `ExplorerTabs.jsx`, `MapFitBounds.jsx`, `MapLegend.jsx`, `Icon.jsx`.
   - `layout/` — `Section`, `EmptyState`, `WalletBar`, `useConfirmDialog.jsx`, `usePrivateKeyRequest.jsx` (promise-based modal that collects a private key when none is stored).
   - `RoleSelector.jsx` is legacy — not imported by `App.jsx` (superseded by `RoleEntry`).
 - `utils/` — `wallet.js` (secp256k1 + keccak256 keypair generation and `addressFromPrivateKey`, matching hub-api's derivation), `keystore.js` (passphrase-encrypted wallet backup: PBKDF2-SHA256 + AES-GCM via WebCrypto, no dependency), `redemption.js` (withdraw record storage and formatting), `passengerRequests.js`, `address.js` (`truncAddr`), `money.js`, `mapMarkers.js` (leaflet `divIcon`s for pickup/dropoff/current-location).

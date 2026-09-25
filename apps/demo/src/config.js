@@ -62,9 +62,6 @@ export const CHAIN_ID =
     ? Number(viteChainId)
     : chainIdForHost(host);
 
-/** Hub API base without trailing slash */
-export const HUB_API_BASE_URL = API_URL.replace(/\/$/, "");
-
 /**
  * payment-orchestrator base URL (deposit intents — `POST/GET /api/v1/deposits`).
  *
@@ -92,36 +89,6 @@ export const EXPLORER_URL =
   (typeof viteExplorer === "string" && viteExplorer.trim().length > 0
     ? viteExplorer.replace(/\/$/, "")
     : null);
-
-export const HUB_HEALTH_URL = `${HUB_API_BASE_URL}/health`;
-export const HUB_GRAPHQL_HTTP_URL = `${HUB_API_BASE_URL}/graphql`;
-
-/** Browser GraphQL subscriptions use this WebSocket URL (same host as Hub, `/graphql/ws`). */
-export const HUB_GRAPHQL_WS_URL = (() => {
-  try {
-    const u = new URL(HUB_API_BASE_URL);
-    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    u.pathname = "/graphql/ws";
-    u.search = "";
-    u.hash = "";
-    return u.toString();
-  } catch {
-    return "";
-  }
-})();
-
-/**
- * Optional comma-separated list of node RPC/WebSocket URLs to show on the General tab
- * (e.g. stage operator). Not required for the app to run; the Hub talks to nodes server-side.
- */
-const viteNodeEndpoints = import.meta.env.VITE_PUBLIC_NODE_ENDPOINTS;
-export const PUBLIC_NODE_ENDPOINTS =
-  typeof viteNodeEndpoints === "string" && viteNodeEndpoints.trim().length > 0
-    ? viteNodeEndpoints
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
 
 /**
  * Map tiles.

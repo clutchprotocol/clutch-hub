@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import PassengerView from './components/PassengerView';
 import DriverView from './components/DriverView';
 import NetworkView from './components/NetworkView';
-import GeneralView from './components/GeneralView';
 import TransactionHistoryPage from './components/TransactionHistoryPage';
 import ExplorerTabs from './components/ExplorerTabs';
 import RoleEntry, { persistRole } from './components/RoleEntry';
@@ -30,7 +29,7 @@ function App() {
   // activeTab: current visible panel ('passenger' | 'driver' | 'hub')
   const [activeTab, setActiveTab] = useState(initialStoredRole || null);
   /** Sub-view when activeTab === 'hub' */
-  const [hubSubTab, setHubSubTab] = useState('about');
+  const [hubSubTab, setHubSubTab] = useState('transactions');
 
   const [userProfile, setUserProfile] = useState({ publicKey: '', privateKey: '' });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -179,12 +178,14 @@ function App() {
 
       <OverlayPanel
         open={activeTab === 'hub'}
-        title="About & network"
+        title="Transactions & network"
         onClose={() => setActiveTab(mode)}
       >
+        {/* The About tab (Hub API URLs, node addresses, GitHub cards) was removed on 2026-09-25:
+            that is developer information, and the project links live on clutchprotocol.io and
+            in the docs. */}
         <ExplorerTabs
           tabs={[
-            { id: 'about', label: 'About', icon: 'ℹ️' },
             { id: 'transactions', label: 'Tx', icon: '📋' },
             { id: 'network', label: 'Network', icon: '🔍' },
           ]}
@@ -192,15 +193,6 @@ function App() {
           onTabChange={setHubSubTab}
           showCounts={false}
         />
-        <div
-          role="tabpanel"
-          id="panel-about"
-          aria-labelledby="tab-about"
-          hidden={hubSubTab !== 'about'}
-          style={{ display: hubSubTab === 'about' ? 'block' : 'none' }}
-        >
-          <GeneralView />
-        </div>
         <div
           role="tabpanel"
           id="panel-transactions"

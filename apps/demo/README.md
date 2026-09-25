@@ -19,7 +19,6 @@ A decentralized ride-sharing application showcasing blockchain integration using
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VITE_API_URL` | Hub API base URL | `http://localhost:3000` |
-| `VITE_PUBLIC_NODE_ENDPOINTS` | Comma-separated node WS URLs (network tab) | empty |
 
 Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environments](https://docs.clutchprotocol.io/getting-started/environments).
 
