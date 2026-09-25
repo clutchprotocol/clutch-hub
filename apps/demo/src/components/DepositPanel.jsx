@@ -3,6 +3,7 @@ import { ClutchHubSdk } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { formatExactUsdt } from '../utils/money';
+import { depositTerms } from '../utils/depositTerms';
 
 /** `truncHash`/`timeAgo`, copied from `TransactionHistory.jsx` (module-private there, not
  * exported) rather than imported — a few duplicated lines beat coupling this panel to a
@@ -140,6 +141,7 @@ const DepositPanel = ({ userProfile, open }) => {
   const [error, setError] = useState(null);
   const [unavailable, setUnavailable] = useState(false);
   const [deposits, setDeposits] = useState([]);
+  const [terms, setTerms] = useState(null);
 
   const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
 
@@ -212,7 +214,10 @@ const DepositPanel = ({ userProfile, open }) => {
         if (!res.ok) {
           throw new Error(body.error || `deposit request failed (${res.status})`);
         }
-        if (!cancelled) setAddress(body.address);
+        if (!cancelled) {
+          setAddress(body.address);
+          setTerms(depositTerms(body));
+        }
 
         // Best-effort: only bother once we know deposits are actually on (the POST above didn't
         // 503) and the effect hasn't already been cleaned up while we were awaiting it. Re-check
@@ -263,11 +268,25 @@ const DepositPanel = ({ userProfile, open }) => {
           <div className="form-row" style={{ marginBottom: '0.35rem' }}>
             <CopyableValue value={address} className="deposit-address" />
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            This is your permanent deposit address — send any amount of Nile USDT (TRC-20) to it and
-            it is credited automatically, appearing in your balance. Any other token or network sent
-            here cannot be recovered.
-          </p>
+          {terms ? (
+            // A GasFree address: the relay's fee comes out of each deposit (GasFree design §2), so the
+            // user is told the most it can be, and what to send for anything to be credited.
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              This is your permanent deposit address. Send at least{' '}
+              <strong>
+                {terms.sendAtLeast} {IS_TESTNET ? 'Nile USDT' : 'USDT'} (TRC-20)
+              </strong>
+              . A network fee of up to {terms.feeUpTo} USDT is taken from each deposit, and what is left
+              must be at least {terms.minimum} USDT to be credited. Any other token or network sent here
+              cannot be recovered.
+            </p>
+          ) : (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              This is your permanent deposit address — send any amount of {IS_TESTNET ? 'Nile USDT' : 'USDT'}{' '}
+              (TRC-20) to it and it is credited automatically, appearing in your balance. Any other token or
+              network sent here cannot be recovered.
+            </p>
+          )}
         </div>
       )}
 
