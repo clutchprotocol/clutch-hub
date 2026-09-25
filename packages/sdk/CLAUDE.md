@@ -105,10 +105,11 @@ query and subscription), then a `listXxx` using `executeGraphQL` and/or a `subsc
   CONTRIBUTING.md mentioning one.
 - tsconfig: ES2020 target, `module: ESNext`, `strict: true`, DOM lib included (browser-first).
 - **semantic-release** on push to `main` (`.github/workflows/npm-publish.yml` + `.releaserc.json`):
-  Conventional Commits required. `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch,
-  `feat!:` or a `BREAKING CHANGE:` footer → major; `docs:`/`chore:`/`ci:`/`test:`/`build:`/`style:`
-  release nothing. Non-releasing pushes to `main` publish a `-canary.<sha>` build under the
-  `canary` dist-tag. A `beta` branch does prereleases. CHANGELOG.md and package.json version are
+  Conventional Commits required. `feat:` → minor, `fix:`/`perf:`/`refactor:`/`build:` → patch,
+  `feat!:` or a `BREAKING CHANGE:` footer → major; `docs:`/`chore:`/`ci:`/`test:`/`style:`
+  release nothing. (`build:` has been a patch since e974923, 2026-09-18.) Only commits that touch
+  `packages/sdk` count at all. A push to `main` that does not release publishes a
+  `-canary.<sha>` build under the `canary` dist-tag; one that releases does not. A `beta` branch does prereleases. CHANGELOG.md and package.json version are
   bot-committed (`chore(release): x.y.z [skip ci]`) — never bump the version by hand.
 - **It runs from the repo root, not from here**, with `pkgRoot: packages/sdk`. That keeps
   `tagFormat` at `v${version}`, which is what the existing `v1`..`v4` tags use. See the root

@@ -41,3 +41,12 @@ test('release notes list only the commits that touch packages/sdk', async () => 
   assert.match(text, /probe in the sdk/);
   assert.doesNotMatch(text, /probe in the demo/);
 });
+
+// npm-publish.yml sets `released` from a marker file, and publish-canary skips when it is true.
+// Until 2026-09-25 nothing wrote that file, so a canary was published after every real release.
+test('a real release writes the marker file that npm-publish.yml reads', () => {
+  const [, exec] = releaserc.plugins.find((plugin) => plugin[0] === '@semantic-release/exec');
+  assert.match(exec.successCmd ?? '', /\.semantic-release-released\b/);
+  const workflow = readFileSync(new URL('../.github/workflows/npm-publish.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /-f \.semantic-release-released\b/);
+});

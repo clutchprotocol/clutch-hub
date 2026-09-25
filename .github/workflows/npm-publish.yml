@@ -68,6 +68,11 @@ jobs:
       - name: Test (against dist/)
         run: npm run test --workspace=clutch-hub-sdk-js
 
+      # .semantic-release-released is written by the successCmd of @semantic-release/exec in
+      # .releaserc.json. semantic-release runs the success step only after a real publish, and
+      # never in dry-run mode. Until 2026-09-25 nothing wrote the file, so `released` was always
+      # false and publish-canary ran after real releases too: the 4.2.1 release run also
+      # published 4.2.0-canary.d284c71. release/sdk-commits.test.mjs checks the two stay wired.
       - name: Run semantic-release
         id: semantic-release
         run: |
