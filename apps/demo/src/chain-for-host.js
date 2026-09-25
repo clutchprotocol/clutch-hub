@@ -53,3 +53,28 @@ export function apiUrlForHost(host, protocol) {
   }
   return null;
 }
+
+/**
+ * The block explorer for a deployment, or null when that network has none.
+ *
+ * Only the testnet has one: `app-stage.<domain>` -> `explorer-stage.<domain>`. The mainnet host
+ * gets null on purpose. The stage explorer indexes the testnet chain, so a mainnet transaction
+ * linked there would only ever show "not found". When a mainnet explorer exists, add
+ * `app.` -> `explorer.` here.
+ */
+export function explorerUrlForHost(host, protocol) {
+  if (typeof host !== "string" || !host.startsWith("app-stage.")) return null;
+  const scheme = typeof protocol === "string" && protocol.length > 0 ? protocol : "https:";
+  return `${scheme}//${host.replace(/^app-stage\./, "explorer-stage.")}`;
+}
+
+/**
+ * The explorer page for one transaction, or null without an explorer or a hash.
+ *
+ * The SDK returns hashes as "0x" + lowercase hex. The explorer keys transactions by lowercase
+ * hex without the prefix, and answers 404 for the prefixed or upper-case form.
+ */
+export function explorerTxUrl(explorerUrl, txHash) {
+  if (!explorerUrl || typeof txHash !== "string" || txHash.length === 0) return null;
+  return `${explorerUrl}/txs/${txHash.replace(/^0x/i, "").toLowerCase()}`;
+}

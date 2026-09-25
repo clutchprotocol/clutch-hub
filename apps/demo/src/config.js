@@ -1,4 +1,4 @@
-import { chainIdForHost, apiUrlForHost } from "./chain-for-host.js";
+import { chainIdForHost, apiUrlForHost, explorerUrlForHost } from "./chain-for-host.js";
 
 const host = typeof window !== "undefined" ? window.location.hostname : "";
 const port = typeof window !== "undefined" ? window.location.port : "";
@@ -79,6 +79,19 @@ export const ORCHESTRATOR_BASE_URL =
   typeof viteOrchestrator === "string" && viteOrchestrator.trim().length > 0
     ? viteOrchestrator.replace(/\/$/, "")
     : "/payment";
+
+/**
+ * The block explorer for this network, or null when it has none (see explorerUrlForHost: only the
+ * testnet has one today). The hostname decides for deployed hosts. `VITE_EXPLORER_URL` is only for
+ * local dev, where the hostname says nothing (e.g. http://localhost:5174 from clutch-deploy's dev
+ * stack). The published image does not set it, so one image stays correct on testnet and mainnet.
+ */
+const viteExplorer = import.meta.env.VITE_EXPLORER_URL;
+export const EXPLORER_URL =
+  explorerUrlForHost(host, protocol) ??
+  (typeof viteExplorer === "string" && viteExplorer.trim().length > 0
+    ? viteExplorer.replace(/\/$/, "")
+    : null);
 
 export const HUB_HEALTH_URL = `${HUB_API_BASE_URL}/health`;
 export const HUB_GRAPHQL_HTTP_URL = `${HUB_API_BASE_URL}/graphql`;
