@@ -103,10 +103,8 @@ Or use [clutch-deploy](https://github.com/clutchprotocol/clutch-deploy) with `--
 ### Dependencies
 - React for UI components
 - Leaflet for interactive maps
-- Clutch Hub SDK for blockchain interactions (`clutch-hub-sdk-js` from **npm**, so Docker and [GitHub Actions](https://github.com/clutchprotocol/clutch-hub-demo-app/actions) can run `npm ci` without a sibling repo)
-
-### Optional: local SDK checkout
-To develop against a local `clutch-hub-sdk-js` clone, use npm link (see the [SDK repo](https://github.com/clutchprotocol/clutch-hub-sdk-js)), or temporarily run `npm install ../clutch-hub-sdk-js` from this directory if the SDK folder sits next to the demo app.
+- Clutch Hub SDK for blockchain interactions: `packages/sdk` in this repo, used as an npm
+  workspace. An SDK change reaches the app without a publish step.
 
 ### Local Storage
 
