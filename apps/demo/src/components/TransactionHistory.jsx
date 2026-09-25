@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatUsd } from '../utils/money';
+import { EXPLORER_URL } from '../config';
+import { explorerTxUrl } from '../chain-for-host.js';
 
 /** Formats a stored tx's fare (bigint, integer number, or numeric string) as USD; null if unparseable. */
 function formatTxFare(fare) {
@@ -103,7 +105,23 @@ const TransactionHistory = ({ userPublicKey, refreshTrigger, contentOnly = false
           </div>
           <div className="timeline-details">
             {formatTxFare(tx.fare) && <span>{formatTxFare(tx.fare)}</span>}
-            {tx.txHash && <span> &middot; {truncHash(tx.txHash)}</span>}
+            {tx.txHash && (
+              <span>
+                {' '}&middot;{' '}
+                {EXPLORER_URL ? (
+                  <a
+                    href={explorerTxUrl(EXPLORER_URL, tx.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open this transaction in the block explorer"
+                  >
+                    {truncHash(tx.txHash)}
+                  </a>
+                ) : (
+                  truncHash(tx.txHash)
+                )}
+              </span>
+            )}
             {tx.status && (
               <span style={{ color: tx.status === 'success' ? 'var(--success)' : tx.status === 'failed' ? 'var(--error)' : 'var(--warning)', marginLeft: '0.35rem', fontWeight: 500 }}>
                 {tx.status}

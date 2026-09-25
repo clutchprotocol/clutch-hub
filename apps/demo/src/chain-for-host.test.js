@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   chainIdForHost,
   apiUrlForHost,
+  explorerUrlForHost,
+  explorerTxUrl,
   TESTNET_CHAIN_ID,
   MAINNET_CHAIN_ID,
 } from "./chain-for-host.js";
@@ -55,4 +57,25 @@ test("the legacy stageweb mapping still works", () => {
 
 test("an unknown host yields no API url, so the build-time value wins", () => {
   assert.equal(apiUrlForHost("example.com", "https:"), null);
+});
+
+test("only the testnet host links to an explorer", () => {
+  assert.equal(
+    explorerUrlForHost("app-stage.clutchprotocol.io", "https:"),
+    "https://explorer-stage.clutchprotocol.io",
+  );
+  // The stage explorer indexes the testnet chain. A mainnet transaction must never link there.
+  for (const h of ["app.clutchprotocol.io", "localhost", "example.com", "", undefined]) {
+    assert.equal(explorerUrlForHost(h, "https:"), null, `${h} must not get an explorer link`);
+  }
+});
+
+test("explorer transaction links use the hash form the explorer accepts", () => {
+  const base = "https://explorer-stage.clutchprotocol.io";
+  // What signTransaction returns: "0x" + hex. The explorer answers 404 to that form.
+  assert.equal(explorerTxUrl(base, "0x8A3E6D39E555"), `${base}/txs/8a3e6d39e555`);
+  assert.equal(explorerTxUrl(base, "8a3e6d39e555"), `${base}/txs/8a3e6d39e555`);
+  assert.equal(explorerTxUrl(null, "0x8a3e6d39e555"), null);
+  assert.equal(explorerTxUrl(base, ""), null);
+  assert.equal(explorerTxUrl(base, undefined), null);
 });

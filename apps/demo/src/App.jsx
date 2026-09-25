@@ -13,6 +13,7 @@ import { OverlayPanel } from './components/layout';
 import { WalletBackupExport } from './components/WalletBackup';
 import UpdatePrompt from './components/UpdatePrompt';
 import { truncAddr } from './utils/address';
+import { EXPLORER_URL } from './config';
 import './App.css';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
@@ -389,6 +390,21 @@ function App() {
                     }}
                   >
                     Back up wallet
+                  </button>
+                )}
+                {/* A button, not a link, so it matches the actions above without new CSS. The
+                    explorer is public, so it does not need a wallet; it shows only on networks
+                    that have one (config EXPLORER_URL). */}
+                {EXPLORER_URL && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      window.open(EXPLORER_URL, '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    Block explorer
                   </button>
                 )}
                 <button
