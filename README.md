@@ -40,8 +40,7 @@ cargo run       # loads config/default.toml, serves on http://localhost:3000
 cargo test
 ```
 
-`services/hub-api` came from [clutch-hub-api](https://github.com/clutchprotocol/clutch-hub-api) on
-2026-09-24, with its history. Its commits never touch `packages/sdk`, so they never change the
+`services/hub-api` came from the `clutch-hub-api` repo on 2026-09-24, with its history. Its commits never touch `packages/sdk`, so they never change the
 SDK's version.
 
 ## Why these are one repo
