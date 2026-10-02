@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Small generic confirm dialog.
@@ -34,7 +35,10 @@ export function useConfirmDialog() {
 
   const ConfirmModal = useCallback(() => {
     if (!open) return null;
-    return (
+    // Rendered into <body>, not where the hook is used. The bottom sheet has a CSS transform, which makes it
+    // the containing block of a position: fixed child, so inside the sheet this dialog was laid out against
+    // the sheet and on phones its buttons could end up under the nav.
+    return createPortal(
       <div
         className="pk-modal-overlay"
         role="dialog"
@@ -63,7 +67,8 @@ export function useConfirmDialog() {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }, [cancelText, confirmText, desc, finish, open, title]);
 

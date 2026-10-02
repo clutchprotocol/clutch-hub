@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Displays an in-app modal to collect a private key (avoids disruptive window.prompt()).
@@ -51,7 +52,10 @@ export function usePrivateKeyRequest() {
 
   const PrivateKeyModal = useCallback(() => {
     if (!open) return null;
-    return (
+    // Rendered into <body>, not where the hook is used. The bottom sheet has a CSS transform, which makes it
+    // the containing block of a position: fixed child, so inside the sheet this dialog was laid out against
+    // the sheet and on phones its buttons could end up under the nav.
+    return createPortal(
       <div
         className="pk-modal-overlay"
         role="dialog"
@@ -93,7 +97,8 @@ export function usePrivateKeyRequest() {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }, [error, finish, onConfirm, open, promptDesc, promptTitle, value]);
 
