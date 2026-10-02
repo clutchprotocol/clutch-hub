@@ -1,53 +1,54 @@
 /* ===== Utility ===== */
 .truncate-address {
-  font-family: ui-monospace, monospace;
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font-family: var(--font-receipt);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink);
   word-break: break-all;
 }
 
+span.truncate-address[title]:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* A price, as a taxi meter shows it: yellow figures on asphalt. */
 .fare-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.25rem 0.65rem;
-  background: var(--accent-muted);
-  color: var(--accent-strong);
-  font-size: 0.82rem;
-  font-weight: 600;
-  border-radius: var(--radius-full);
+  padding: 0.2rem 0.55rem;
+  background: var(--asphalt);
+  color: var(--lane);
+  font-family: var(--font-receipt);
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
+/* Status dots do not pulse: a trip receipt printing a new line is the only motion in the app. */
 .status-dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--muted);
   flex-shrink: 0;
 }
 
-.status-dot--live {
-  background: var(--success);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
+.status-dot--live,
 .status-dot--done {
-  background: var(--success);
+  background: var(--sign);
 }
 
 .status-dot--error {
-  background: var(--error);
+  background: var(--caution);
 }
 
 .status-dot--warn {
-  background: var(--warning);
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  background: var(--lane);
+  box-shadow: 0 0 0 1px var(--asphalt);
 }
 
 /* ===== Form & layout ===== */
@@ -58,19 +59,18 @@
   flex-wrap: wrap;
 }
 
+/* An offer is a line on the receipt: a dashed rule above it, the driver on the left, the price and
+   the Accept button on the right. */
 .offer-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface-container-low);
-  border-radius: var(--radius);
+  padding: 0.75rem 0;
+  background: transparent;
   border: none;
-}
-
-.offer-row + .offer-row {
-  margin-top: 0.75rem;
+  border-top: 1px dashed rgba(20, 24, 28, 0.55);
+  border-radius: 0;
 }
 
 .offer-row--driver {
@@ -85,37 +85,25 @@
   gap: 0.75rem;
 }
 
-.offer-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-container), var(--primary-dim));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 18px;
-}
-
 .offer-row-driver-meta {
   min-width: 0;
 }
 
 .offer-row-driver-address {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--on-surface);
+  font-family: var(--font-receipt);
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--ink);
   margin: 0;
   word-break: break-word;
 }
 
 .offer-row-driver-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--on-surface-variant);
-  margin: 0.15rem 0 0 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin: 0.1rem 0 0 0;
 }
 
 .offer-row-actions {
@@ -124,11 +112,10 @@
 }
 
 .offer-row-price {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--on-surface);
+  font-family: var(--font-receipt);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--ink);
   margin: 0;
-  font-family: var(--font-headline);
   white-space: nowrap;
 }
-

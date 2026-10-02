@@ -1,40 +1,36 @@
-/* ===== Entry role selection screen ===== */
+/* ===== Entry: pick a seat ===== */
 .role-entry {
   width: 100%;
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-  padding: 2rem 1.75rem;
 }
 
 .role-entry-header {
-  text-align: center;
   margin-bottom: 2rem;
 }
 
 .role-entry-logo {
-  width: 48px;
-  height: 48px;
+  display: block;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-lg);
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .role-entry-title {
-  font-family: var(--font-headline);
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--on-surface);
-  margin: 0 0 0.25rem 0;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 10vw, 3.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 0.6rem 0;
 }
 
 .role-entry-subtitle {
-  font-size: 0.9rem;
-  color: var(--on-surface-variant);
+  font-size: 1.1rem;
+  line-height: 1.45;
+  color: var(--body);
   margin: 0;
+  max-width: 34ch;
 }
 
 .role-entry-buttons {
@@ -43,50 +39,60 @@
   gap: 1rem;
 }
 
+/* Two signs. Passenger is the green one, driver is the asphalt one, so the choice is a colour and a
+   word, not an emoji. */
 .role-entry-button {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.9rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-container-low);
-  cursor: pointer;
-  transition: background var(--transition), box-shadow var(--transition), transform 120ms ease-out;
-}
-
-.role-entry-button--driver {
-  background: radial-gradient(circle at top left, rgba(0, 200, 83, 0.25), transparent 55%), var(--surface-container-low);
+  justify-content: flex-start;
+  padding: 1.25rem 1.4rem;
+  border: 2px solid var(--asphalt);
+  border-radius: var(--radius);
+  text-align: left;
+  color: #fff;
 }
 
 .role-entry-button--passenger {
-  background: radial-gradient(circle at top left, rgba(39, 110, 241, 0.25), transparent 55%), var(--surface-container-low);
+  background: var(--sign);
+  border-color: var(--sign);
 }
 
-.role-entry-button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+.role-entry-button--passenger:hover {
+  background: var(--sign-deep);
+  border-color: var(--sign-deep);
 }
 
-.role-entry-emoji {
-  font-size: 1.6rem;
+.role-entry-button--driver {
+  background: var(--asphalt);
+}
+
+.role-entry-button--driver:hover {
+  background: var(--asphalt-2);
+}
+
+.role-entry-button:focus-visible {
+  outline-color: var(--lane);
+  outline-offset: 3px;
 }
 
 .role-entry-text {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 0.15rem;
 }
 
 .role-entry-label {
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
   font-weight: 700;
-  color: var(--on-surface);
+  line-height: 1;
+  color: #fff;
 }
 
 .role-entry-hint {
-  font-size: 0.85rem;
-  color: var(--on-surface-variant);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #d6dcd8;
 }
-

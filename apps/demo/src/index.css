@@ -1,135 +1,210 @@
-/* Clutch Demo – Kinetic Precision Design System (from Stitch) */
+/* Clutch app: the road.
+ *
+ * Same palette and type as clutchprotocol.io (its styles.css :root): asphalt, concrete, a highway-sign
+ * green and lane-marking yellow. Change colours here only.
+ *
+ * The old Kinetic Precision names (--surface-container-*, --primary, --on-surface ...) are kept as
+ * aliases at the bottom of :root. Inline styles in the JSX still use them, and this way they take
+ * the new palette without being edited one by one.
+ */
+
+/* Latin subsets only. The UI has no other script; the map labels come from the tiles. */
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/barlow-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/barlow-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/barlow-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/barlow-condensed-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/barlow-condensed-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+}
+
 :root {
-  /* Typography */
-  --font-headline: 'Manrope', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-label: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-sans: var(--font-body);
+  /* The road */
+  --asphalt: #14181c;
+  --asphalt-2: #232a31;
+  --concrete: #eceee8;
+  --concrete-2: #e0e3dc;
+  --paper: #fdfdf8;
+  --sign: #0a5c45;
+  --sign-deep: #07463a;
+  --lane: #e8b923;
+  --caution: #b8420c;
 
-  /* Kinetic Precision – Dark theme */
-  --surface: #ffffff;
-  --surface-dim: #ffffff;
-  --background: #f7f9ff;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #eef2ff;
-  --surface-container: #e8efff;
-  --surface-container-high: #dde6ff;
-  --surface-container-highest: #d3dcff;
-  --surface-bright: #cbd6ff;
-  --surface-variant: #e6ecff;
+  --ink: var(--asphalt);
+  --body: #333a3f;
+  --muted: #5b6460;
+  --line: #c9cec5;
 
-  /* Legacy aliases for components */
-  --bg-base: #f7f9ff;
-  --bg-surface: #eef2ff;
-  --bg-card: #e8efff;
-  --bg-elevated: #dde6ff;
-  --bg-highest: #d3dcff;
+  /* Type: Barlow Condensed for titles and big numbers, Barlow for text, Plex Mono for anything
+     that is read letter by letter: addresses, hashes, receipts. */
+  --font: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  --font-receipt: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
-  --outline: #5f6a86;
-  --outline-variant: #aab3c7;
-  --border: rgba(95, 106, 134, 0.18);
-  --border-subtle: rgba(95, 106, 134, 0.35);
-
-  /* Primary – The Pulse */
-  --primary: #8cacff;
-  --primary-dim: #256df0;
-  --primary-container: #276ef1;
-  --primary-fixed: #769dff;
-  --primary-fixed-dim: #5f8fff;
-  --surface-tint: #8cacff;
-
-  --on-primary: #002a6d;
-  --on-primary-fixed: #000000;
-  --on-primary-container: #ffffff;
-
-  /* Text */
-  --on-surface: #0b1220;
-  --on-background: #0b1220;
-  --on-surface-variant: #3f4a63;
-  --text-primary: #0b1220;
-  --text-secondary: #3f4a63;
-  --text-muted: #6a728a;
-  --text-inverse: #0b1220;
-
-  /* Secondary */
-  --secondary: #dbe6ff;
-  --secondary-dim: #c9d6ff;
-  --secondary-container: #a8b5d8;
-  --secondary-fixed: #dbe6ff;
-  --secondary-fixed-dim: #c9d6ff;
-  --on-secondary: #263141;
-  --on-secondary-container: #0b1220;
-
-  /* Tertiary */
-  --tertiary: #ffb7f9;
-  --tertiary-dim: #ef93ec;
-  --tertiary-container: #fea0fb;
-  --tertiary-fixed: #fea0fb;
-  --tertiary-fixed-dim: #ef93ec;
-  --on-tertiary: #722275;
-  --on-tertiary-container: #67176b;
-
-  /* Error & Success */
-  --error: #ff716c;
-  --error-dim: #d7383b;
-  --error-container: #9f0519;
-  --on-error: #490006;
-  --on-error-container: #ffa8a3;
-  --warning: #d97706;
-  --success: #059669;
-
-  /* Accent aliases */
-  --accent: #276ef1;
-  --accent-hover: #4d8aff;
-  --accent-muted: rgba(39, 110, 241, 0.15);
-  --accent-strong: #8cacff;
-
-  /* Roundness */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
+  /* Shape. Controls are 6px like the site's buttons. The green sign card is the one big radius. */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 22px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
-  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.22);
+  --transition: 0.15s ease;
+  --transition-slow: 0.25s ease;
 
-  --transition: 0.2s ease;
-  --transition-slow: 0.3s ease;
+  /* The lane-marking dash, as on the site: 36px yellow, 36px gap. */
+  --lane-dashes: repeating-linear-gradient(90deg, var(--lane) 0 36px, transparent 36px 72px);
 
-  /* Theme helpers (used by App.css) */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-strong: rgba(255, 255, 255, 0.92);
-  --leaflet-container-bg: #e8eef7;
-  --leaflet-attribution-bg: rgba(255, 255, 255, 0.92);
-  --map-gradient-overlay-start: rgba(6, 14, 32, 0.12);
-  --map-gradient-overlay-mid: rgba(6, 14, 32, 0.18);
+  --top-bar-h: 52px;
+  --nav-h: 56px;
+
+  /* ---- Aliases for the old Kinetic Precision names. Do not use in new rules. ---- */
+  --font-headline: var(--font-display);
+  --font-body: var(--font);
+  --font-label: var(--font);
+  --font-sans: var(--font);
+
+  --surface: var(--paper);
+  --surface-dim: var(--paper);
+  --background: var(--concrete);
+  --surface-container-lowest: var(--paper);
+  --surface-container-low: #e6e9e2;
+  --surface-container: var(--concrete-2);
+  --surface-container-high: #d6dad2;
+  --surface-container-highest: #cdd2c9;
+  --surface-bright: #c3c9bf;
+  --surface-variant: #dfe3da;
+
+  --bg-base: var(--concrete);
+  --bg-surface: #e6e9e2;
+  --bg-card: var(--concrete-2);
+  --bg-elevated: #d6dad2;
+  --bg-highest: #cdd2c9;
+
+  --outline: var(--muted);
+  --outline-variant: var(--line);
+  --border: var(--line);
+  --border-subtle: #aeb5ab;
+
+  --primary: var(--sign);
+  --primary-dim: var(--sign-deep);
+  --primary-container: var(--sign);
+  --primary-fixed: var(--sign);
+  --primary-fixed-dim: var(--sign-deep);
+  --surface-tint: var(--sign);
+  --on-primary: #ffffff;
+  --on-primary-fixed: #ffffff;
+  --on-primary-container: #ffffff;
+
+  --on-surface: var(--ink);
+  --on-background: var(--ink);
+  --on-surface-variant: var(--body);
+  --text-primary: var(--ink);
+  --text-secondary: var(--body);
+  --text-muted: var(--muted);
+  --text-inverse: #ffffff;
+
+  --secondary: var(--concrete-2);
+  --secondary-dim: #d6dad2;
+  --secondary-container: #cdd2c9;
+  --on-secondary: var(--ink);
+  --on-secondary-container: var(--ink);
+  --tertiary: var(--lane);
+  --tertiary-dim: var(--lane);
+  --tertiary-container: var(--lane);
+  --on-tertiary: var(--asphalt);
+  --on-tertiary-container: var(--asphalt);
+
+  --error: var(--caution);
+  --error-dim: #8f3209;
+  --error-container: #f3d9cc;
+  --on-error: #ffffff;
+  --on-error-container: #6b2406;
+  --warning: #8a6500;
+  --success: var(--sign);
+
+  --accent: var(--sign);
+  --accent-hover: var(--sign-deep);
+  --accent-muted: rgba(10, 92, 69, 0.1);
+  --accent-strong: var(--sign);
+
+  --shadow-xs: 0 1px 0 rgba(20, 24, 28, 0.08);
+  --shadow-sm: 0 2px 6px rgba(20, 24, 28, 0.12);
+  --shadow: 0 4px 12px rgba(20, 24, 28, 0.14);
+  --shadow-md: 0 8px 20px rgba(20, 24, 28, 0.18);
+  --shadow-lg: 0 14px 30px rgba(20, 24, 28, 0.22);
+
+  --glass-bg: rgba(236, 238, 232, 0.92);
+  --glass-bg-strong: var(--concrete);
+  --leaflet-container-bg: var(--concrete-2);
+  --leaflet-attribution-bg: rgba(236, 238, 232, 0.92);
+  --map-gradient-overlay-start: transparent;
+  --map-gradient-overlay-mid: transparent;
 }
+
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: var(--font-body);
+  font-family: var(--font);
   font-weight: 400;
-  color: var(--on-surface);
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ink);
   background: var(--background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
 }
 
 #root {
@@ -137,49 +212,60 @@ body {
 }
 
 button {
-  font-family: var(--font-body);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
   border: none;
   border-radius: var(--radius);
-  font-weight: 500;
-  transition: all var(--transition);
-  line-height: 1.4;
+  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 input {
-  font-family: var(--font-body);
+  font-family: var(--font);
+  font-size: 1rem;
   line-height: 1.4;
 }
 
 a {
-  color: var(--primary);
-  text-decoration: none;
-  transition: color var(--transition);
+  color: var(--sign);
+  text-underline-offset: 3px;
 }
 
 a:hover {
-  color: var(--accent-hover);
+  color: var(--sign-deep);
+}
+
+code {
+  font-family: var(--font-receipt);
+  font-size: 0.88em;
+  background: var(--concrete-2);
+  padding: 0.08em 0.35em;
+  border-radius: 3px;
 }
 
 ::selection {
-  background: var(--accent-muted);
-  color: var(--on-surface);
+  background: var(--lane);
+  color: var(--asphalt);
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary-container);
+  outline: 3px solid var(--asphalt);
   outline-offset: 2px;
 }
 
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-
-.text-on-primary-fixed {
-  color: var(--on-primary-fixed);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
