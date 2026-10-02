@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ClutchHubSdk } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
+import { Row } from './receipt';
+import QrCode from './QrCode';
 import { formatExactUsdt } from '../utils/money';
 import { depositTerms } from '../utils/depositTerms';
 
@@ -48,6 +50,14 @@ const DEPOSIT_STATUS_LABELS = {
   needs_manual: 'Needs review',
 };
 
+/** The dot beside a status, as a `status-dot--` suffix: green once the CLT is in the balance, orange
+ * when a person has to look, yellow for everything still moving. A status not listed counts as still
+ * moving, the same way an unlisted label shows its raw string. */
+const DEPOSIT_STATUS_TONES = {
+  credited: 'done',
+  needs_manual: 'error',
+};
+
 /** `formatExactUsdt` throws on anything it can't read as a non-negative integer — correct for a
  * payment-amount field where a bad value should fail loudly, wrong here: this app has no error
  * boundary, so letting that throw escape render would blank the whole panel (or app) over one bad
@@ -83,11 +93,48 @@ export function CopyableValue({ value, className }) {
   );
 }
 
-/**
- * "Top up with USDT": on mount, fetches this account's permanent Nile TRC-20 deposit address and
- * displays it — any amount sent there is credited automatically, with no amount, intent, or poll.
- * The private key is needed only to obtain a hub JWT via `sdk.getAuthHeaders()`, not to sign anything.
- */
+/** The "Copy address" button. The clipboard is missing on a page that is not served over https and
+ * can refuse a request, so a failure is written on the button instead of passing without a sign —
+ * the address is shown in full beside it, so the user can still select it by hand. */
+function CopyButton({ value }) {
+  const [state, setState] = useState('idle'); // 'idle' | 'copied' | 'failed'
+  const handleCopy = () => {
+    const finish = (next) => {
+      setState(next);
+      setTimeout(() => setState('idle'), 1500);
+    };
+    if (!navigator.clipboard) {
+      finish('failed');
+      return;
+    }
+    navigator.clipboard.writeText(String(value)).then(
+      () => finish('copied'),
+      () => finish('failed'),
+    );
+  };
+  return (
+    <button type="button" className="btn-primary" onClick={handleCopy} aria-live="polite">
+      {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy address'}
+    </button>
+  );
+}
+
+/** The "Share" button: the phone's own share sheet (messages, mail, notes ...) with the address in
+ * it. The Web Share API is missing on many desktop browsers, and a button that does nothing is worse
+ * than none, so it is simply not drawn there. The promise rejects when the user closes the sheet
+ * without choosing; there is nothing to do about that. */
+function ShareButton({ value }) {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return null;
+  const handleShare = () => {
+    navigator.share({ title: 'My Clutch deposit address', text: String(value) }).catch(() => {});
+  };
+  return (
+    <button type="button" className="btn-secondary" onClick={handleShare}>
+      Share
+    </button>
+  );
+}
+
 /**
  * Where to get test USDT, on testnet deployments only.
  *
@@ -103,17 +150,15 @@ export function CopyableValue({ value, className }) {
  * takes real money would be actively dangerous on a live deployment.
  */
 const TestnetFaucetGuide = () => (
-  <details className="card" style={{ marginBottom: '1rem', padding: '0.75rem 1rem' }}>
-    <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-      Testnet — how to get USDT to deposit
-    </summary>
-    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.6rem', lineHeight: 1.55 }}>
-      <p style={{ marginTop: 0 }}>
+  <details className="deposit-guide">
+    <summary>How to get test USDT (testnet only)</summary>
+    <div className="deposit-guide-body">
+      <p>
         This deployment settles on the <strong>Tron Nile testnet</strong>. The USDT here is test
         currency with no value — you cannot buy it, and nothing you deposit is real money.
       </p>
-      <ol style={{ paddingLeft: '1.2rem', margin: '0.5rem 0' }}>
-        <li>Copy the deposit address this panel shows below.</li>
+      <ol>
+        <li>Copy the deposit address shown above.</li>
         <li>
           Open the{' '}
           <a href="https://nileex.io/join/getJoinPage" target="_blank" rel="noopener noreferrer">
@@ -127,14 +172,17 @@ const TestnetFaucetGuide = () => (
           few minutes.
         </li>
       </ol>
-      <p style={{ marginBottom: 0 }}>
-        Send <strong>only Nile USDT (TRC-20)</strong>. Mainnet USDT, TRX, or any other token sent to
-        a deposit address will not be credited and cannot be returned.
-      </p>
     </div>
   </details>
 );
 
+/**
+ * "Top up with USDT": when the panel opens, fetches this account's permanent TRC-20 deposit address
+ * and shows it the way an exchange does — the network, the address as a QR code and as text with Copy
+ * and Share, then what to send. Any amount sent there is credited automatically, with no amount,
+ * intent, or poll. The private key is needed only to obtain a hub JWT via `sdk.getAuthHeaders()`,
+ * not to sign anything.
+ */
 const DepositPanel = ({ userProfile, open }) => {
   const [address, setAddress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -243,14 +291,15 @@ const DepositPanel = ({ userProfile, open }) => {
   }, [open, userProfile, requestPrivateKey]);
 
   return (
-    <div className="card">
-      <h3 className="card-title">Top up with USDT</h3>
+    <div className="card deposit-ticket">
+      <div className="deposit-head">
+        <h3 className="card-title">Top up with USDT</h3>
+        <span className={`network-chip${IS_TESTNET ? ' network-chip--test' : ''}`}>
+          {IS_TESTNET ? 'Tron Nile testnet · TRC-20' : 'Tron · TRC-20'}
+        </span>
+      </div>
 
-      {IS_TESTNET && <TestnetFaucetGuide />}
-
-      {loading && !address && (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Loading your deposit address…</p>
-      )}
+      {loading && !address && <p className="deposit-hint">Loading your deposit address…</p>}
 
       {!loading && !address && unavailable && (
         <div className="status-banner info">
@@ -263,57 +312,72 @@ const DepositPanel = ({ userProfile, open }) => {
       )}
 
       {address && (
-        <div>
-          <p className="label">Pay to address</p>
-          <div className="form-row" style={{ marginBottom: '0.35rem' }}>
-            <CopyableValue value={address} className="deposit-address" />
+        <>
+          <div className="deposit-main">
+            <div className="qr-tile">
+              <QrCode value={address} label="QR code of your deposit address" />
+            </div>
+            <div className="deposit-side">
+              <p className="deposit-hint">
+                Your permanent deposit address. Scan the code with a wallet app, or copy the address.
+              </p>
+              <CopyableValue value={address} className="deposit-address" />
+              <div className="deposit-actions">
+                <CopyButton value={address} />
+                <ShareButton value={address} />
+              </div>
+            </div>
           </div>
-          {terms ? (
-            // A GasFree address: the relay's fee comes out of each deposit (GasFree design §2), so the
-            // user is told the most it can be, and what to send for anything to be credited.
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              This is your permanent deposit address. Send at least{' '}
-              <strong>
-                {terms.sendAtLeast} {IS_TESTNET ? 'Nile USDT' : 'USDT'} (TRC-20)
-              </strong>
-              . A network fee of up to {terms.feeUpTo} USDT is taken from each deposit, and what is left
-              must be at least {terms.minimum} USDT to be credited. Any other token or network sent here
-              cannot be recovered.
-            </p>
-          ) : (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              This is your permanent deposit address — send any amount of {IS_TESTNET ? 'Nile USDT' : 'USDT'}{' '}
-              (TRC-20) to it and it is credited automatically, appearing in your balance. Any other token or
-              network sent here cannot be recovered.
-            </p>
-          )}
-        </div>
+
+          <div className="status-banner warning" role="note">
+            {IS_TESTNET ? (
+              <>
+                <strong>Send only Nile USDT (TRC-20).</strong> Mainnet USDT, TRX or any other token
+                sent here cannot be recovered.
+              </>
+            ) : (
+              <>
+                <strong>Send only USDT on the TRON network (TRC-20).</strong> Any other token or
+                network sent here cannot be recovered.
+              </>
+            )}
+          </div>
+
+          <div className="deposit-rows">
+            {terms ? (
+              // A GasFree address: the relay's fee comes out of each deposit (GasFree design §2), so the
+              // user is told the most it can be, and what to send for anything to be credited.
+              <>
+                <Row label="Send at least">{terms.sendAtLeast} USDT</Row>
+                <Row label="Network fee">up to {terms.feeUpTo} USDT</Row>
+                <Row label="Minimum after fee">{terms.minimum} USDT</Row>
+              </>
+            ) : (
+              <Row label="Amount">Any amount</Row>
+            )}
+            <Row label="Credited as">CLT</Row>
+          </div>
+
+          {IS_TESTNET && <TestnetFaucetGuide />}
+        </>
       )}
 
       {deposits.length > 0 && (
-        <div style={{ marginTop: '1rem' }}>
-          <p className="label">Recent deposits</p>
-          {deposits.map((d) => (
-            <div
-              key={d.id}
-              className="form-row"
-              style={{
-                justifyContent: 'space-between',
-                padding: '0.5rem 0',
-                borderBottom: '1px solid var(--outline-variant)',
-                fontSize: '0.8rem',
-              }}
-            >
-              <span>{formatDepositAmount(d.amount_usdt)} USDT</span>
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {DEPOSIT_STATUS_LABELS[d.status] ?? d.status}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {depositTime(d)}
-              </span>
-              <span style={{ color: 'var(--text-muted)' }}>{truncHash(d.tron_tx_id)}</span>
-            </div>
-          ))}
+        <div>
+          <h4 className="r-title">Recent deposits</h4>
+          <ul className="deposit-list">
+            {deposits.map((d) => (
+              <li key={d.id} className="deposit-list-row">
+                <span className="deposit-amount">{formatDepositAmount(d.amount_usdt)} USDT</span>
+                <span className="deposit-status">
+                  <span className={`status-dot status-dot--${DEPOSIT_STATUS_TONES[d.status] ?? 'warn'}`} />
+                  {DEPOSIT_STATUS_LABELS[d.status] ?? d.status}
+                </span>
+                <span className="r-note">{depositTime(d)}</span>
+                <span className="deposit-hash">{truncHash(d.tron_tx_id)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

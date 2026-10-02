@@ -28,7 +28,8 @@ Env vars (Vite, must be prefixed `VITE_`):
   - `RideRequestCard.jsx` — one open request and the offers against it; own state and subscription, extracted from `PassengerView`.
   - `MapControls.jsx` — `LocationSelector`, `MapCenterTracker`, `MapFlyToLocation`: headless, render `null`, exist only to reach Leaflet through react-leaflet's context.
   - `KeyStorageNotice.jsx` — shown before a key exists, not after. Not dismissible.
-  - `DepositPanel.jsx` / `WithdrawPanel.jsx` — the USDT deposit and redemption rails; they talk to the payment orchestrator directly, not through the SDK or Hub API.
+  - `DepositPanel.jsx` / `WithdrawPanel.jsx` — the USDT deposit and redemption rails; they talk to the payment orchestrator directly, not through the SDK or Hub API. The Top up page is laid out like an exchange's deposit page: network chip, the permanent address as a QR code (`QrCode.jsx`) and as text with Copy and Share, one warning, the fee terms as receipt lines. Share uses the Web Share API and is not drawn where the browser has none.
+  - `QrCode.jsx` — draws a QR code as one SVG path (`utils/qr.js`) from the vendored generator. Renders nothing if the text cannot be encoded.
   - `PassengerView.jsx` — largest file: map-based ride builder, open requests + offers, active/recent trips.
   - `DriverView.jsx` — available ride requests, make-offer form, driver trips.
   - `ActiveTripCard.jsx` — shared trip card with pay (passenger-only UI) and cancel (either party) actions.
@@ -37,7 +38,8 @@ Env vars (Vite, must be prefixed `VITE_`):
   - `EnvTag.jsx` — the yellow `Test network` tag, from `IS_TESTNET`; used in the top bar, the menu, overlay panels and the entry screen.
   - `layout/` — `Section`, `EmptyState`, `WalletBar`, `useConfirmDialog.jsx`, `usePrivateKeyRequest.jsx` (promise-based modal that collects a private key when none is stored).
   - `RoleSelector.jsx` is legacy — not imported by `App.jsx` (superseded by `RoleEntry`).
-- `utils/` — `wallet.js` (secp256k1 + keccak256 keypair generation and `addressFromPrivateKey`, matching hub-api's derivation), `keystore.js` (passphrase-encrypted wallet backup: PBKDF2-SHA256 + AES-GCM via WebCrypto, no dependency), `redemption.js` (withdraw record storage and formatting), `passengerRequests.js`, `address.js` (`truncAddr`), `money.js`, `mapMarkers.js` (leaflet `divIcon`s for pickup/dropoff/current-location), `paidPercent.js` (whole percent of a fare paid, bigint safe, own test).
+- `utils/` — `wallet.js` (secp256k1 + keccak256 keypair generation and `addressFromPrivateKey`, matching hub-api's derivation), `keystore.js` (passphrase-encrypted wallet backup: PBKDF2-SHA256 + AES-GCM via WebCrypto, no dependency), `redemption.js` (withdraw record storage and formatting), `passengerRequests.js`, `address.js` (`truncAddr`), `money.js`, `mapMarkers.js` (leaflet `divIcon`s for pickup/dropoff/current-location), `paidPercent.js` (whole percent of a fare paid, bigint safe, own test), `qr.js` (QR modules to one SVG path, own test).
+- `vendor/` — third-party code kept as released, so ESLint skips it (`eslint.config.js`). `qrcode.js` is qrcode-generator 1.4.4 (MIT, no dependencies); its README says where it came from and the one change made to it. Do not edit it by hand. To update it, download the new release and redo that change.
 
 ## State management and data flow
 

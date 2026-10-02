@@ -64,6 +64,211 @@
   background: var(--concrete-2);
 }
 
+/* ===== Top up — see components/DepositPanel.jsx =====
+   Laid out like an exchange's deposit page: the network first, then the QR code beside the address
+   with Copy and Share, then the one warning that matters, then the terms as receipt lines. */
+.deposit-ticket {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.deposit-ticket .status-banner {
+  margin: 0;
+}
+
+.deposit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.deposit-head .card-title {
+  margin: 0;
+}
+
+/* Which chain the address is on. The dot is green on the live network and yellow on a test network,
+   like the "Test network" tag in the panel header. */
+.network-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  border: 2px solid var(--asphalt);
+  border-radius: var(--radius-full);
+  background: var(--paper);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.network-chip::before {
+  content: '';
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid var(--asphalt);
+  border-radius: 50%;
+  background: var(--sign);
+}
+
+.network-chip--test::before {
+  background: var(--lane);
+}
+
+.deposit-main {
+  display: grid;
+  gap: 1.1rem;
+  justify-items: center;
+}
+
+/* White whatever the page colour: scanners need a light margin around the code. The margin itself
+   is drawn by QrCode (4 modules); the padding here only keeps the code off the border. */
+.qr-tile {
+  width: min(240px, 100%);
+  aspect-ratio: 1;
+  padding: 6px;
+  color: var(--asphalt);
+  background: #fff;
+  border: 2px solid var(--asphalt);
+  border-radius: var(--radius);
+}
+
+/* QrCode draws nothing when it cannot encode the value. The address is still there as text. */
+.qr-tile:empty {
+  display: none;
+}
+
+.qr-code {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.deposit-side {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.deposit-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.deposit-main .deposit-hint {
+  text-align: center;
+}
+
+/* One button fills the row (no Share where the browser has none), two share it, and on a very narrow
+   screen they stack instead of wrapping the label. */
+.deposit-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.deposit-actions > button {
+  padding-inline: 0.75rem;
+}
+
+.deposit-rows {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(20, 24, 28, 0.55);
+  font-size: 0.95rem;
+}
+
+/* Labels stay on one line; if a line is too long for a narrow screen, the value is what wraps. */
+.deposit-rows .r-row > :first-child {
+  white-space: nowrap;
+}
+
+.deposit-rows .r-row > :last-child {
+  font-family: var(--font-receipt);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.deposit-guide {
+  padding: 0.7rem 1rem;
+  background: var(--concrete-2);
+  border-radius: var(--radius-sm);
+}
+
+.deposit-guide summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.deposit-guide-body {
+  margin-top: 0.6rem;
+  color: var(--body);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.deposit-guide-body p {
+  margin: 0;
+}
+
+.deposit-guide-body ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.deposit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deposit-list-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.15rem 0.75rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-top: 1px dashed rgba(20, 24, 28, 0.4);
+}
+
+.deposit-amount {
+  font-family: var(--font-receipt);
+  font-weight: 500;
+}
+
+.deposit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.deposit-hash {
+  grid-column: 1 / -1;
+  font-family: var(--font-receipt);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* Wide enough for the code and the address side by side. */
+@media (min-width: 640px) {
+  .deposit-main {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  .qr-tile {
+    width: 220px;
+  }
+
+  .deposit-main .deposit-hint {
+    text-align: left;
+  }
+}
+
 /* Withdraw (redemption) panel — see components/WithdrawPanel.jsx. The payout address and the
    redemption reference reuse .deposit-address above, for the same reason it exists: a value that
    has to be checked or pasted must be readable in full. The rows are receipt lines. */

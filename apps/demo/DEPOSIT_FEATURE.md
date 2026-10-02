@@ -4,7 +4,9 @@ Client + plumbing for paying testnet USDT and receiving CLT. Backend (`payment-o
 
 ## Component and mount point
 
-`src/components/DepositPanel.jsx` — one form + result view. States: amount input → `POST /api/v1/deposits` → pay-address/exact-amount display with a 5s poll of `GET /api/v1/deposits/:id` → status chip through to `credited`/`expired`/`failed`/`needs_manual`.
+`src/components/DepositPanel.jsx` — when the panel opens: `POST /api/v1/deposits` (no body) returns the account's permanent TRC-20 address, shown as a QR code and as text with Copy and Share buttons next to the network and the fee terms, and `GET /api/v1/deposits` lists recent deposits, refreshed every 10s, each with a status dot (`credited` green, `needs_manual` orange, the rest yellow).
+
+> The sections below were written for the first design, with an amount input and a one-off pay amount per deposit. The permanent address replaced it, so the amount-input and exact-amount parts no longer apply.
 
 Mounted in `src/App.jsx` as the "Top up" tab of the Wallet panel (an `OverlayPanel` with `ExplorerTabs`, always mounted and `hidden`-toggled like the app's other tabbed panel). Its `open` prop is true only while that tab is visible. The menu's "Wallet" button opens the panel on this tab.
 
