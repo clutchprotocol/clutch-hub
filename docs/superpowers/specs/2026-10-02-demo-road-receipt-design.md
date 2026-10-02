@@ -61,7 +61,7 @@ Barlow Condensed 600 and 700 for titles and big numbers. Barlow 400, 500 and 600
 
 `src/components/receipt.jsx` exports `Receipt`, `Row`, `Rule`, `Meter` and `CopyableAddress`. Trip cards (active and completed), the open request with its offers, and the driver's request detail use them. Paper, Plex Mono, dashed rules, a torn bottom edge (same mask as the site's hero receipt). The fare meter has ten segments and fills as the passenger pays.
 
-The only motion in the app is `.r-print`: a line prints in from the top, in five steps, when it mounts. The `Paid` row and each new offer use it. `prefers-reduced-motion` turns it off. Status dots no longer pulse. Sheet snap and meter fill remain, because they answer a tap.
+The only keyframe animation in the app is `.r-print`: a line prints in from the top, in five steps, when it mounts. The `Paid` row and each new offer use it. `prefers-reduced-motion` turns it off. Status dots no longer pulse. Sheet snap and meter fill remain, because they answer a tap.
 
 ### Map
 
@@ -78,7 +78,7 @@ The only motion in the app is `.r-print`: a line prints in from the top, in five
 
 ### Accessibility floor
 
-Body text 16 px. Inputs 16 px (no iOS zoom). Primary and secondary buttons at least 44 px high (40 px inside receipts). Focus ring: 3 px asphalt, yellow on dark bars. The main text pairs were checked against 4.5:1: white on `sign` 8:1, `caution` on paper 5.5:1, muted on concrete 5.2:1, `lane` on asphalt 9.7:1. Icons are gone, so every control has a text label.
+Body text 16 px. Inputs 16 px (no iOS zoom). Primary and secondary buttons at least 44 px high (40 px inside receipts). Focus ring: 3 px asphalt, yellow on dark bars. The main text pairs were checked against 4.5:1: white on `sign` 8:1, `caution` on paper 5.5:1, muted on concrete 5.2:1, `lane` on asphalt 9.7:1. Icons are gone, so buttons carry words (the sheet drag handle has an `aria-label`; Leaflet's zoom buttons are Leaflet's own).
 
 ## Files
 
