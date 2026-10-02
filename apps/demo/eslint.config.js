@@ -4,7 +4,8 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  // src/vendor is third-party code kept as released (see src/vendor/README.md), so it is not linted.
+  { ignores: ['dist', 'src/vendor'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

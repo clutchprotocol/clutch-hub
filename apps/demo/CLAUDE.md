@@ -8,7 +8,7 @@ Reference passenger/driver UI for Clutch Protocol. React 19 + Vite 6 + react-lea
 - `predev`/`prebuild` are gone. They used to run `npm run build --prefix ../clutch-hub-sdk-js` because the SDK was a separate checkout reached by `file:`. It is a workspace now, and the SDK's own `prepare` builds it during `npm install`.
 - `npm run build` / `npm run lint` (flat-config ESLint 9, JS/JSX only) / `npm run preview` still work from this directory if you prefer.
 - There is no separate production build path. `package.prod.json`, `build:prod`, `install:prod`, and the two PowerShell deploy scripts were deleted on 2026-09-10: all four were broken (`install:prod` stripped vite before invoking it, `deploy-prod.ps1` deleted the lockfile then ran `npm ci`, `restore-dev.ps1` needed an untracked file) and the pin was stuck at SDK `^1.15.0`, which cannot resolve past the 3.0.0 wire-format break. The image build in `Dockerfile` is the production path: **its context is the repo root**, and it runs one `npm ci` for both workspaces before building the SDK and then this app.
-- `npm test` — Node's own test runner over `src/**/*.test.js`. No framework, no dependency. Tests sit next to the code: `chain-for-host`, `depositTerms`, `keystore` and `paidPercent`. They gate the image build in `docker-publish.yml`; the keystore ones matter most, because most of what they assert are refusals, and a refusal that silently stops happening looks exactly like success from the UI.
+- `npm test` — Node's own test runner over `src/**/*.test.js`. No framework, no dependency. Tests sit next to the code: `chain-for-host`, `depositTerms`, `keystore`, `paidPercent` and `qr`. They gate the image build in `docker-publish.yml`; the keystore ones matter most, because most of what they assert are refusals, and a refusal that silently stops happening looks exactly like success from the UI.
 - The old CI checked the SDK repo out beside this one and installed it from its own lockfile, to recreate a layout that did not exist. Both repos are one now, so there is a single checkout and a single lockfile, and `docker-publish.yml` rebuilds the image when `packages/sdk/**` changes — which the split could not do at all.
 
 Env vars (Vite, must be prefixed `VITE_`):
@@ -28,7 +28,8 @@ Env vars (Vite, must be prefixed `VITE_`):
   - `RideRequestCard.jsx` — one open request and the offers against it; own state and subscription, extracted from `PassengerView`.
   - `MapControls.jsx` — `LocationSelector`, `MapCenterTracker`, `MapFlyToLocation`: headless, render `null`, exist only to reach Leaflet through react-leaflet's context.
   - `KeyStorageNotice.jsx` — shown before a key exists, not after. Not dismissible.
-  - `DepositPanel.jsx` / `WithdrawPanel.jsx` — the USDT deposit and redemption rails; they talk to the payment orchestrator directly, not through the SDK or Hub API.
+  - `DepositPanel.jsx` / `WithdrawPanel.jsx` — the USDT deposit and redemption rails; they talk to the payment orchestrator directly, not through the SDK or Hub API. The Top up page is laid out like an exchange's deposit page: network chip, the permanent address as a QR code (`QrCode.jsx`) and as text with Copy and Share, one warning, the fee terms as receipt lines. Share uses the Web Share API and is not drawn where the browser has none.
+  - `QrCode.jsx` — draws a QR code as one SVG path (`utils/qr.js`) from the vendored generator. Renders nothing if the generator throws (for example when the text is too long for any QR size).
   - `PassengerView.jsx` — largest file: map-based ride builder, open requests + offers, active/recent trips.
   - `DriverView.jsx` — available ride requests, make-offer form, driver trips.
   - `ActiveTripCard.jsx` — shared trip card with pay (passenger-only UI) and cancel (either party) actions.
@@ -37,7 +38,8 @@ Env vars (Vite, must be prefixed `VITE_`):
   - `EnvTag.jsx` — the yellow `Test network` tag, from `IS_TESTNET`; used in the top bar, the menu, overlay panels and the entry screen.
   - `layout/` — `Section`, `EmptyState`, `WalletBar`, `useConfirmDialog.jsx`, `usePrivateKeyRequest.jsx` (promise-based modal that collects a private key when none is stored).
   - `RoleSelector.jsx` is legacy — not imported by `App.jsx` (superseded by `RoleEntry`).
-- `utils/` — `wallet.js` (secp256k1 + keccak256 keypair generation and `addressFromPrivateKey`, matching hub-api's derivation), `keystore.js` (passphrase-encrypted wallet backup: PBKDF2-SHA256 + AES-GCM via WebCrypto, no dependency), `redemption.js` (withdraw record storage and formatting), `passengerRequests.js`, `address.js` (`truncAddr`), `money.js`, `mapMarkers.js` (leaflet `divIcon`s for pickup/dropoff/current-location), `paidPercent.js` (whole percent of a fare paid, bigint safe, own test).
+- `utils/` — `wallet.js` (secp256k1 + keccak256 keypair generation and `addressFromPrivateKey`, matching hub-api's derivation), `keystore.js` (passphrase-encrypted wallet backup: PBKDF2-SHA256 + AES-GCM via WebCrypto, no dependency), `redemption.js` (withdraw record storage and formatting), `passengerRequests.js`, `address.js` (`truncAddr`), `money.js`, `mapMarkers.js` (leaflet `divIcon`s for pickup/dropoff/current-location), `paidPercent.js` (whole percent of a fare paid, bigint safe, own test), `qr.js` (QR modules to one SVG path, own test).
+- `vendor/` — third-party code kept as released, so ESLint skips it (`eslint.config.js`). `qrcode.js` is qrcode-generator 1.4.4 (MIT, no dependencies); its README says where it came from and the two changes made to it. Do not edit it by hand. To update it, download the new release and redo those changes.
 
 ## State management and data flow
 
