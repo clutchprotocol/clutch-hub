@@ -4,8 +4,9 @@
  * responsive.css overrides rules defined above it, and moving it would change the layout
  * without changing a single rule.
  *
- * The split was mechanical: every part is a contiguous range of the original App.css, and
- * concatenating them in this order reproduces it byte for byte. Nothing was rewritten.
+ * The rules in these files were rewritten for the road and receipt look (2026-10-02); the split into
+ * files and this order did not change. overlays.css loads after responsive.css, so a rule that
+ * overrides an overlays.css selector lives in overlays.css itself.
  */
 @import "./styles/shell.css";
 @import "./styles/entry.css";

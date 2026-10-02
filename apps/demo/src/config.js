@@ -35,6 +35,8 @@ const viteApi = import.meta.env.VITE_API_URL;
  * Hostname-derived, like API_URL above, because the app has no other signal: which chain the
  * orchestrator watches is decided by its own config and never reaches the browser. If that ever
  * changes, read it from the server instead of guessing from a URL.
+ *
+ * It also decides whether the "Test network" tag shows (components/EnvTag.jsx).
  */
 export const IS_TESTNET =
   host.startsWith("app-stage.") ||

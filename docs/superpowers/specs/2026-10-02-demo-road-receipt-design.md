@@ -72,19 +72,19 @@ The only keyframe animation in the app is `.r-print`: a line prints in from the 
 
 ### Environment
 
-- The top bar tag and the PWA name come from the host. `Clutch Stage` is removed from `App.jsx` and from the manifest name (`Clutch`).
+- The `Test network` tag comes from the host (`IS_TESTNET`) and shows on every screen that has a header: the top bar, the entry screens, the overlay pages and the menu (`components/EnvTag.jsx`). The PWA name is the fixed string `Clutch`, because one build serves both hosts; `Clutch Stage` is removed from `App.jsx` and from the manifest.
 - `theme-color` and the manifest colours become asphalt `#14181c`.
 - `public/clutch-logo.svg` becomes an asphalt square with two yellow dashes (the same mark as the top bar). It is full-bleed so the PWA mask works.
 
 ### Accessibility floor
 
-Body text 16 px. Inputs 16 px (no iOS zoom). Primary and secondary buttons at least 44 px high (40 px inside receipts). Focus ring: 3 px asphalt, yellow on dark bars. The main text pairs were checked against 4.5:1: white on `sign` 8:1, `caution` on paper 5.5:1, muted on concrete 5.2:1, `lane` on asphalt 9.7:1. Icons are gone, so buttons carry words (the sheet drag handle has an `aria-label`; Leaflet's zoom buttons are Leaflet's own).
+Body text 16 px. Inputs 16 px (no iOS zoom). Primary and secondary buttons at least 44 px high (40 px inside receipts). Focus ring: 3 px asphalt, yellow on dark bars; inputs use a 3 px sign green ring. The main text pairs were checked against 4.5:1: white on `sign` 8:1, `caution` on paper 5.4:1, muted on concrete 5.2:1, `lane` on asphalt 9.7:1. Icons are gone, so buttons carry words (the sheet drag handle has an `aria-label`; Leaflet's zoom buttons are Leaflet's own).
 
 ## Files
 
 CSS (all rewritten in place, import order in `App.css` unchanged): `index.css`, `styles/shell.css`, `entry.css`, `wallet.css`, `primitives.css`, `map.css`, `sections.css`, `explorer.css`, `forms.css`, `trip.css`, `responsive.css`, `overlays.css`.
 
-JSX: `App.jsx`, `ActiveTripCard.jsx`, `CompletedTripCard.jsx`, `RideRequestCard.jsx`, `DriverView.jsx`, `PassengerView.jsx`, `NetworkView.jsx`, `RoleEntry.jsx`, `TransactionHistoryPage.jsx`, `layout/OverlayPanel.jsx`, `utils/mapMarkers.js`, `main.jsx`. New: `receipt.jsx`, `RouteLine.jsx`. Deleted: `Icon.jsx` (its two uses go).
+JSX: `App.jsx`, `ActiveTripCard.jsx`, `CompletedTripCard.jsx`, `RideRequestCard.jsx`, `DriverView.jsx`, `PassengerView.jsx`, `NetworkView.jsx`, `RoleEntry.jsx`, `TransactionHistoryPage.jsx`, `layout/OverlayPanel.jsx`, `utils/mapMarkers.js`, `main.jsx`. New: `receipt.jsx`, `RouteLine.jsx`, `EnvTag.jsx`. Deleted: `Icon.jsx` (its two uses go).
 
 Other: `src/fonts/*` (7 `woff2`, 3 licenses), `utils/paidPercent.js` and `utils/paidPercent.test.js` (a new file with no imports, because `money.js` imports the SDK and the test should not need an SDK build), `public/clutch-logo.svg`, `public/manifest.webmanifest`, `vite.config.js` (manifest), `index.html` (`theme-color`, iOS status bar style `black`), `apps/demo/CLAUDE.md` (styling section).
 

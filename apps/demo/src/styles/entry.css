@@ -15,6 +15,17 @@
   margin-bottom: 1.25rem;
 }
 
+.role-entry-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.role-entry-brand .role-entry-logo {
+  margin-bottom: 0;
+}
+
 .role-entry-title {
   font-family: var(--font-display);
   font-size: clamp(2.5rem, 10vw, 3.5rem);

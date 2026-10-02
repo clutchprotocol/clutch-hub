@@ -1,6 +1,7 @@
 import React from 'react';
 import { WalletBar } from './layout';
 import KeyStorageNotice from './KeyStorageNotice';
+import EnvTag from './EnvTag';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
 
@@ -28,7 +29,10 @@ const RoleEntry = ({
   return (
     <div className="role-entry">
       <div className="role-entry-header">
-        <img src="/clutch-logo.svg" alt="Clutch" className="role-entry-logo" width={40} height={40} />
+        <div className="role-entry-brand">
+          <img src="/clutch-logo.svg" alt="Clutch" className="role-entry-logo" width={40} height={40} />
+          <EnvTag />
+        </div>
         <h1 className="role-entry-title">{title}</h1>
         <p className="role-entry-subtitle">{subtitle}</p>
       </div>

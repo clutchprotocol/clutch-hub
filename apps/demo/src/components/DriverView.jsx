@@ -87,6 +87,7 @@ const RequestDetail = ({
         title="Ride request"
         aside={<span className="fare-badge" title={`${req.fare} CLT`}>{formatUsd(req.fare)}</span>}
       >
+        <Rule />
         <Row label="Passenger">
           <span className="truncate-address" title={req.passengerAddress}>
             {truncAddr(req.passengerAddress)}

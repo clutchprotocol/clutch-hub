@@ -11,8 +11,9 @@ import WithdrawPanel from './components/WithdrawPanel';
 import { OverlayPanel } from './components/layout';
 import { WalletBackupExport } from './components/WalletBackup';
 import UpdatePrompt from './components/UpdatePrompt';
+import EnvTag from './components/EnvTag';
 import { truncAddr } from './utils/address';
-import { EXPLORER_URL, IS_TESTNET } from './config';
+import { EXPLORER_URL } from './config';
 import './App.css';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
@@ -153,7 +154,7 @@ function App() {
         <div className="top-pill top-pill--logo">
           <span className="top-bar-logo-text">Clutch</span>
           {/* A test network says so on every screen; the mainnet shows no tag. */}
-          {IS_TESTNET && <span className="env-tag">Test network</span>}
+          <EnvTag />
         </div>
         <div className="top-bar-right">
           {userProfile.publicKey && (
@@ -316,7 +317,10 @@ function App() {
         <div className="app-menu-overlay" onClick={() => setMenuOpen(false)}>
           <aside className="app-menu" onClick={(e) => e.stopPropagation()}>
             <div className="app-menu-top-row">
-              <span className="app-menu-title">Menu</span>
+              <div className="app-menu-heading">
+                <span className="app-menu-title">Menu</span>
+                <EnvTag />
+              </div>
               <button
                 type="button"
                 className="app-menu-close-btn"

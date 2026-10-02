@@ -16,6 +16,7 @@
   font-size: 0.875rem;
   line-height: 1.55;
   padding: 18px 16px 34px;
+  overflow-wrap: anywhere;
   -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%;
   mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%;
 }
@@ -84,6 +85,10 @@
   color: var(--ink);
   font-size: 1.05rem;
   font-weight: 500;
+}
+
+.r-row--total > :first-child {
+  color: var(--ink);
 }
 
 /* A row that heads a block: the label is a title, the right side holds its buttons. */
