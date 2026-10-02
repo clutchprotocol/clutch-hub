@@ -12,7 +12,7 @@ const Toast = ({ status, onDismiss }) => {
         <span className="toast-message">{status.message}</span>
         {status.type === 'error' && (
           <button type="button" className="toast-dismiss" onClick={onDismiss} aria-label="Dismiss">
-            ×
+            Dismiss
           </button>
         )}
       </div>

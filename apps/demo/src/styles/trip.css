@@ -1,7 +1,8 @@
 /* ===== The trip receipt =====
    Every trip, request and offer list is a strip of thermal paper, like the one on the site's front
    page: paper colour, Plex Mono, dashed rules, a torn edge at the bottom. It is the one bold thing in
-   the app. The only motion in the app is one line printing in when something arrives (.r-print). */
+   the app. The only keyframe animation in the app is one line printing in when something arrives
+   (.r-print); short transitions answer a tap. */
 .receipt-wrap {
   margin-bottom: 1.25rem;
   filter: drop-shadow(0 8px 12px rgba(20, 24, 28, 0.2));

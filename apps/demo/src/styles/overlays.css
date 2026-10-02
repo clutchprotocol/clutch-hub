@@ -397,11 +397,20 @@ button.top-pill--menu:hover {
 }
 
 .toast-dismiss {
+  flex: none;
+  padding: 0.2rem 0.6rem;
   background: transparent;
-  color: var(--body);
-  font-size: 1.25rem;
-  line-height: 1;
-  padding: 0 0.3rem;
+  color: var(--ink);
+  border: 2px solid var(--asphalt);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.toast-dismiss:hover {
+  background: var(--asphalt);
+  color: #fff;
 }
 
 /* ===== Full-screen overlay panel =====
@@ -638,14 +647,22 @@ button.top-pill--menu:hover {
 }
 
 .update-prompt-dismiss {
-  flex-shrink: 0;
-  background: none;
-  border: 0;
+  flex: none;
+  padding: 0.3rem 0.65rem;
+  background: transparent;
+  color: #e6eae7;
+  border: 2px solid #5b6460;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  font-size: 1.35rem;
-  line-height: 1;
-  padding: 0 0.2rem;
-  color: #b4bcb7;
+}
+
+.update-prompt-dismiss:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--asphalt);
 }
 
 .update-prompt :focus-visible {

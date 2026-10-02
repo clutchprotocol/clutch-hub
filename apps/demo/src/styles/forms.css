@@ -27,7 +27,7 @@ span.truncate-address[title]:hover {
   white-space: nowrap;
 }
 
-/* Status dots do not pulse: a trip receipt printing a new line is the only motion in the app. */
+/* Status dots do not pulse: a trip receipt printing a new line is the only keyframe animation in the app. */
 .status-dot {
   display: inline-block;
   width: 8px;

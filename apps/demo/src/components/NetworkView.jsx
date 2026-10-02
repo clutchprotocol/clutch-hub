@@ -154,7 +154,7 @@ const NetworkView = () => {
         <div className="explorer-network-header-right">
           <span className={`api-status-pill hub-online-pill ${loading ? 'hub-online-pill--loading' : apiOk ? 'hub-online-pill--live' : 'hub-online-pill--error'}`}>
             {loading ? <span className="status-dot" /> : apiOk ? <span className="status-dot status-dot--live" /> : <span className="status-dot status-dot--error" />}
-            {loading ? 'Checking...' : error ? 'API Offline' : apiOk ? 'Hub Online' : 'API Unknown'}
+            {loading ? 'Checking...' : error ? 'API offline' : apiOk ? 'Hub online' : 'API unknown'}
           </span>
         </div>
       </div>

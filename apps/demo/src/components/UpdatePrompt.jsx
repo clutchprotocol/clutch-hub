@@ -31,7 +31,7 @@ const UpdatePrompt = () => {
         onClick={() => setDismissed(true)}
         aria-label="Not now"
       >
-        ×
+        Not now
       </button>
     </div>
   );
