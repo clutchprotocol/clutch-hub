@@ -16,79 +16,78 @@
 }
 
 .section-title {
-  font-family: var(--font-headline);
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--on-surface);
+  line-height: 1.1;
+  color: var(--ink);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  letter-spacing: -0.02em;
 }
 
 .section-icon {
-  font-size: 1.1rem;
-  opacity: 0.8;
+  display: none;
 }
 
 .section-badge {
-  font-size: 0.7rem;
+  font-family: var(--font);
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--accent-strong);
-  background: var(--accent-muted);
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-full);
+  color: #fff;
+  background: var(--asphalt);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-sm);
 }
 
 .section-description {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.95rem;
+  color: var(--muted);
   margin: 0.4rem 0 0 0;
   line-height: 1.5;
 }
 
 .section-toggle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
-  color: var(--on-surface-variant);
-  background: var(--surface-container);
-  border: none;
+  color: var(--asphalt);
+  background: transparent;
+  border: 2px solid var(--asphalt);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all var(--transition);
 }
 
 .section-toggle:hover {
-  background: var(--surface-container-high);
-  color: var(--on-surface);
+  background: var(--asphalt);
+  color: #fff;
 }
 
-/* ===== Empty state ===== */
+/* ===== Empty state =====
+   Three road dashes where an icon used to be: an empty road, nothing on it yet. */
 .empty-state {
   text-align: center;
   padding: 2.5rem 1.5rem;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .empty-state-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 56px;
-  height: 56px;
-  margin: 0 auto 1rem;
-  background: var(--surface-container);
-  border-radius: var(--radius);
+  height: 6px;
+  margin: 0 auto 1.1rem;
+  background: repeating-linear-gradient(90deg, var(--asphalt) 0 14px, transparent 14px 21px);
+}
+
+.empty-state-icon svg {
+  display: none;
 }
 
 .empty-state-message {
-  font-size: 0.9rem;
-  margin: 0;
-  line-height: 1.6;
+  font-size: 1rem;
+  margin: 0 auto;
+  max-width: 34ch;
+  line-height: 1.55;
 }
-

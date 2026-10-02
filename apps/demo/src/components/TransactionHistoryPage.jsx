@@ -6,7 +6,6 @@ const TransactionHistoryPage = ({ userPublicKey }) => {
   return (
     <Section
       title="Transaction history"
-      icon="📋"
       description={userPublicKey ? 'Your latest signed and submitted transaction events.' : 'Connect your wallet to view your transaction history.'}
     >
       {!userPublicKey ? (

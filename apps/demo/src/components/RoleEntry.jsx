@@ -1,6 +1,7 @@
 import React from 'react';
 import { WalletBar } from './layout';
 import KeyStorageNotice from './KeyStorageNotice';
+import EnvTag from './EnvTag';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
 
@@ -28,7 +29,10 @@ const RoleEntry = ({
   return (
     <div className="role-entry">
       <div className="role-entry-header">
-        <img src="/clutch-logo.svg" alt="Clutch" className="role-entry-logo" width={40} height={40} />
+        <div className="role-entry-brand">
+          <img src="/clutch-logo.svg" alt="Clutch" className="role-entry-logo" width={40} height={40} />
+          <EnvTag />
+        </div>
         <h1 className="role-entry-title">{title}</h1>
         <p className="role-entry-subtitle">{subtitle}</p>
       </div>
@@ -40,9 +44,6 @@ const RoleEntry = ({
             className="role-entry-button role-entry-button--passenger"
             onClick={() => onSelectRole('passenger')}
           >
-            <span className="role-entry-emoji" aria-hidden="true">
-              🧍
-            </span>
             <div className="role-entry-text">
               <span className="role-entry-label">Passenger</span>
               <span className="role-entry-hint">Request rides and pay instantly.</span>
@@ -54,9 +55,6 @@ const RoleEntry = ({
             className="role-entry-button role-entry-button--driver"
             onClick={() => onSelectRole('driver')}
           >
-            <span className="role-entry-emoji" aria-hidden="true">
-              🚗
-            </span>
             <div className="role-entry-text">
               <span className="role-entry-label">Driver</span>
               <span className="role-entry-hint">Accept rides and track earnings.</span>

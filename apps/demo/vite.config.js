@@ -26,7 +26,7 @@ export default defineConfig({
       manifest: {
         id: '/',
         lang: 'en',
-        name: 'Clutch Stage',
+        name: 'Clutch',
         short_name: 'Clutch',
         description: 'Clutch decentralized ride-sharing demo',
         start_url: '/',
@@ -35,10 +35,9 @@ export default defineConfig({
         display_override: ['standalone', 'browser'],
         orientation: 'portrait',
         prefer_related_applications: false,
-        // The light palette's background. These were the dark theme's, which survived the toggle's
-        // removal and would have shown a dark splash before a light app.
-        background_color: '#f7f9ff',
-        theme_color: '#f7f9ff',
+        // The top bar's colour (asphalt). The splash screen and the browser bar match it.
+        background_color: '#14181c',
+        theme_color: '#14181c',
         icons: [
           {
             src: '/favicon.ico',

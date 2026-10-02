@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MapFitBounds from './MapFitBounds';
 import ActiveTripCard from './ActiveTripCard';
 import CompletedTripCard from './CompletedTripCard';
@@ -23,6 +23,8 @@ import TransactionHistory from './TransactionHistory';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { pickupIcon, dropoffIcon } from '../utils/mapMarkers';
 import MapLegend from './MapLegend';
+import RouteLine from './RouteLine';
+import { Receipt, Row, Rule } from './receipt';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
@@ -81,28 +83,28 @@ const RequestDetail = ({
   return (
     <div>
       <button type="button" className="sheet-back-btn" onClick={onBack}>← All requests</button>
-      <div className="form-row" style={{ justifyContent: 'space-between', margin: '0.5rem 0 0.875rem' }}>
-        <span className="truncate-address" title={req.passengerAddress}>
-          Passenger: {truncAddr(req.passengerAddress)}
-        </span>
-        <span className="fare-badge" title={`${req.fare} CLT`}>{formatUsd(req.fare)}</span>
-      </div>
-
-      <div style={{ marginBottom: '0.875rem' }}>
-        <div className="form-row" style={{ justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>Offers ({offers.length})</span>
-          <button type="button" className="btn-ghost" onClick={fetchOffers} disabled={loadingOffers} style={{ fontSize: '0.75rem' }}>
+      <Receipt
+        title="Ride request"
+        aside={<span className="fare-badge" title={`${req.fare} CLT`}>{formatUsd(req.fare)}</span>}
+      >
+        <Rule />
+        <Row label="Passenger">
+          <span className="truncate-address" title={req.passengerAddress}>
+            {truncAddr(req.passengerAddress)}
+          </span>
+        </Row>
+        <Rule />
+        <div className="r-row r-row--head">
+          <span>Offers ({offers.length})</span>
+          <button type="button" className="btn-ghost" onClick={fetchOffers} disabled={loadingOffers}>
             {loadingOffers ? '...' : 'Refresh'}
           </button>
         </div>
-        {offersError && <div className="status-banner error" style={{ padding: '0.5rem', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{offersError}</div>}
-        {offers.length === 0 && !loadingOffers && !offersError && (
-          <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0 }}>No offers yet.</p>
-        )}
+        {offersError && <div className="status-banner error">{offersError}</div>}
+        {offers.length === 0 && !loadingOffers && !offersError && <p className="r-text">No offers yet.</p>}
         {offers.map((offer) => (
-          <div key={offer.txHash} className="offer-row offer-row--driver">
+          <div key={offer.txHash} className="offer-row offer-row--driver r-print">
             <div className="offer-row-driver">
-              <div className="offer-avatar" aria-hidden>🚗</div>
               <div className="offer-row-driver-meta">
                 <p className="offer-row-driver-address">{truncAddr(offer.driverAddress)}</p>
                 <p className="offer-row-driver-label">Driver</p>
@@ -111,37 +113,31 @@ const RequestDetail = ({
             <div className="offer-row-price" title={`${offer.fare} CLT`}>{formatUsd(offer.fare)}</div>
           </div>
         ))}
-      </div>
-
-      <div>
-        <div className="form-row">
-          <label className="label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Your offer</label>
+        <Rule />
+        <h4 className="r-title">Your offer ($)</h4>
+        <div className="r-actions">
           <input
             type="text"
             inputMode="decimal"
             value={offerFares[req.txHash] !== undefined ? offerFares[req.txHash] : formatUsd(req.fare).slice(1)}
             onChange={(e) => handleFareChange(req.txHash, e.target.value)}
-            className="input-field"
-            style={{ width: 100, padding: '0.4rem 0.5rem', fontSize: '0.85rem' }}
+            className="input-field r-narrow"
+            aria-label="Your offer in dollars"
             disabled={disabled || acceptingTxHash === req.txHash}
           />
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>$</span>
           <button
             type="button"
-            className="btn-primary"
-            style={{ marginLeft: 'auto', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+            className="btn-primary r-go"
             disabled={disabled || !!acceptingTxHash || !userProfile.publicKey}
             onClick={() => handleAcceptOffer(req)}
           >
-            {acceptingTxHash === req.txHash ? 'Submitting...' : disabled ? 'Finish trip first' : userProfile.publicKey ? 'Make Offer' : 'Connect wallet'}
+            {acceptingTxHash === req.txHash ? 'Submitting...' : disabled ? 'Finish trip first' : userProfile.publicKey ? 'Make offer' : 'Connect wallet'}
           </button>
         </div>
         {acceptingTxHash === req.txHash && offerReferrer && (
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>
-            Referrer on this offer: {offerReferrer}
-          </p>
+          <p className="r-note">Referrer on this offer: {offerReferrer}</p>
         )}
-      </div>
+      </Receipt>
     </div>
   );
 };
@@ -418,7 +414,7 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
           {!hasActiveTrip && selectedRequest && (
             <>
               <Marker position={selDropoff} icon={dropoffIcon}><Popup>Dropoff</Popup></Marker>
-              <Polyline positions={[selPickup, selDropoff]} color="var(--accent)" weight={4} opacity={0.9} />
+              <RouteLine positions={[selPickup, selDropoff]} />
               <MapFitBounds positions={[selPickup, selDropoff]} />
             </>
           )}
@@ -431,14 +427,11 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
             <>
               <Marker position={[Number(tripWithRoute.pickupLocation.latitude), Number(tripWithRoute.pickupLocation.longitude)]} icon={pickupIcon}><Popup>Pickup</Popup></Marker>
               <Marker position={[Number(tripWithRoute.dropoffLocation.latitude), Number(tripWithRoute.dropoffLocation.longitude)]} icon={dropoffIcon}><Popup>Dropoff</Popup></Marker>
-              <Polyline
+              <RouteLine
                 positions={[
                   [Number(tripWithRoute.pickupLocation.latitude), Number(tripWithRoute.pickupLocation.longitude)],
                   [Number(tripWithRoute.dropoffLocation.latitude), Number(tripWithRoute.dropoffLocation.longitude)],
                 ]}
-                color="var(--accent)"
-                weight={4}
-                opacity={0.9}
               />
               <MapFitBounds
                 positions={[

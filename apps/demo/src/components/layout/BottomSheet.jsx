@@ -5,7 +5,8 @@ const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
 
 const visibleFor = (s) => {
   const vh = window.innerHeight;
-  if (s === 'peek') return 200;
+  // Must match .bottom-sheet--peek in styles/overlays.css.
+  if (s === 'peek') return 232;
   if (s === 'half') return Math.round(vh * 0.55);
   return Math.round(vh * 0.88);
 };

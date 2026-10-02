@@ -141,8 +141,8 @@ const TransactionHistory = ({ userPublicKey, refreshTrigger, contentOnly = false
         onClick={() => setIsExpanded(!isExpanded)}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
       >
-        <h3 className="card-title" style={{ margin: 0 }}>Transaction History</h3>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{isExpanded ? '▲' : '▼'}</span>
+        <h3 className="card-title" style={{ margin: 0 }}>Transaction history</h3>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{isExpanded ? 'Hide' : 'Show'}</span>
       </div>
       {isExpanded && <div style={{ marginTop: '1rem' }}>{timeline}</div>}
     </div>

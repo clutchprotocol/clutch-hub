@@ -30,7 +30,7 @@ const BalanceDisplay = ({ publicKey }) => {
 
   if (loading) {
     return (
-      <div className="wallet-balance" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>...</div>
+      <div className="wallet-balance" style={{ fontSize: '0.85rem' }}>...</div>
     );
   }
 

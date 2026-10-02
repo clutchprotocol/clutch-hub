@@ -10,10 +10,8 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: none;
+  background: var(--paper);
+  border: 2px solid var(--asphalt);
 }
 
 .wallet-connected {
@@ -24,59 +22,64 @@
 }
 
 .wallet-address {
-  font-family: ui-monospace, monospace;
-  font-size: 0.8rem;
-  color: var(--on-surface-variant);
+  font-family: var(--font-receipt);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink);
   cursor: pointer;
-  padding: 0.35rem 0.65rem;
-  background: var(--surface-container-high);
-  border-radius: var(--radius);
-  transition: background var(--transition);
+  padding: 0.35rem 0.6rem;
+  background: var(--concrete-2);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 160px;
   border: none;
 }
 
+.wallet-address:hover {
+  background: var(--surface-container-high);
+}
+
 .deposit-address {
-  /* Deliberately NOT .wallet-address: that one is a 140px chip with an ellipsis, which is right
+  /* Deliberately NOT .wallet-address: that one is a 160px chip with an ellipsis, which is right
      for showing someone their own address and wrong for one they are about to send money to.
      An address you cannot read in full is an address you cannot check against what you pasted. */
   display: block;
-  font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
-  color: var(--text-primary);
+  font-family: var(--font-receipt);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
   cursor: pointer;
-  padding: 0.6rem 0.75rem;
-  background: var(--surface-container-high);
-  border-radius: var(--radius);
-  transition: background var(--transition);
+  padding: 0.65rem 0.75rem;
+  background: var(--paper);
+  border: 2px dashed var(--asphalt);
+  border-radius: var(--radius-sm);
   overflow-wrap: anywhere;
   line-height: 1.5;
   user-select: all;
 }
 
 .deposit-address:hover {
-  background: var(--surface-container-highest);
+  background: var(--concrete-2);
 }
 
 /* Withdraw (redemption) panel — see components/WithdrawPanel.jsx. The payout address and the
    redemption reference reuse .deposit-address above, for the same reason it exists: a value that
-   has to be checked or pasted must be readable in full. */
+   has to be checked or pasted must be readable in full. The rows are receipt lines. */
 .redeem-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 0.75rem;
-  padding: 0.45rem 0;
-  border-bottom: 1px solid var(--outline-variant);
-  font-size: 0.85rem;
-  color: var(--text-primary);
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed rgba(20, 24, 28, 0.4);
+  font-size: 0.95rem;
+  color: var(--ink);
 }
 
 .redeem-row-label {
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .redeem-status {
@@ -84,26 +87,23 @@
 }
 
 .redeem-note {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 0.95rem;
+  color: var(--body);
   line-height: 1.55;
   margin: 0.6rem 0 0;
 }
 
-.wallet-address:hover {
-  background: var(--surface-container-highest);
-}
-
 .wallet-balance {
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--text-primary);
+  line-height: 1;
+  color: var(--ink);
 }
 
 .wallet-balance-unit {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--muted);
   margin-left: 0.2rem;
 }
-
