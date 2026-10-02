@@ -6,11 +6,11 @@ Client + plumbing for paying testnet USDT and receiving CLT. Backend (`payment-o
 
 `src/components/DepositPanel.jsx` — when the panel opens: `POST /api/v1/deposits` (no body) returns the account's permanent TRC-20 address, shown as a QR code and as text with Copy and Share buttons next to the network and the fee terms, and `GET /api/v1/deposits` lists recent deposits, refreshed every 10s, each with a status dot (`credited` green, `needs_manual` orange, the rest yellow).
 
-> The sections below were written for the first design, with an amount input and a one-off pay amount per deposit. The permanent address replaced it, so the amount-input and exact-amount parts no longer apply.
-
 Mounted in `src/App.jsx` as the "Top up" tab of the Wallet panel (an `OverlayPanel` with `ExplorerTabs`, always mounted and `hidden`-toggled like the app's other tabbed panel). Its `open` prop is true only while that tab is visible. The menu's "Wallet" button opens the panel on this tab.
 
 Deposits never sign an on-chain transaction (unlike the withdraw/Burn flow, which is out of scope here) — CLT arrives via the treasury's own mint bridge. The only reason a private key is needed at all is that `sdk.getAuthHeaders()` calls `generateToken` internally, which requires a signed proof-of-key-ownership challenge; this hits the same "private key before the first authenticated call" trap CLAUDE.md documents for `createUnsigned*`, so the same `usePrivateKeyRequest()` modal pattern is reused.
+
+> The next sections `Exact-amount handling`, `Testing` and `Decisions made along the way` were written for the first design: an amount input, a one-off pay amount per deposit and a 5 second poll that stops at a final status. The permanent address replaced it, so read them as history. `URL resolution`, `CORS` and `nginx` still apply.
 
 ## Exact-amount handling (the point of the task)
 

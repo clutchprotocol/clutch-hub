@@ -8,10 +8,12 @@ const QUIET_ZONE = 4;
 /**
  * A QR code, drawn as one SVG path. `value` is encoded as text; `label` is the accessible name.
  *
- * It renders nothing when the text cannot be encoded, so a failure here never blanks the panel around it:
- * the same value is always shown as text beside the code. The dark colour is `currentColor` and the
- * quiet zone is left transparent, so the parent decides the colours; scanners need the zone white, so
- * the parent (`.qr-tile`) sets a white background.
+ * It renders nothing when the generator throws (for example when the text is too long for any QR size),
+ * so a failure here never blanks the panel around it: the same value is always shown as text beside the
+ * code. The generator writes one byte per character, which is right for an address (ASCII); for other
+ * text, set `qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8']` first. The dark colour is
+ * `currentColor` and the quiet zone is left transparent, so the parent decides the colours; scanners
+ * need the zone white, so the parent (`.qr-tile`) sets a white background.
  */
 const QrCode = ({ value, label }) => {
   const shape = useMemo(() => {

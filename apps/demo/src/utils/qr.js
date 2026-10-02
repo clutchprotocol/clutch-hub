@@ -6,7 +6,7 @@
  * each side so a viewBox of `size + 2 * quiet` includes the quiet zone (scanners need about 4 modules
  * of white around the code). Merging runs keeps the path short: a version 3 code has 841 modules.
  *
- * Kept free of imports so its test needs no QR library.
+ * Kept free of imports: it needs only `isDark`, so most of its tests use a small hand-made grid.
  *
  * @param {number} size
  * @param {(row: number, col: number) => boolean} isDark

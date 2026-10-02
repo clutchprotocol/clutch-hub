@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ClutchHubSdk } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
@@ -98,10 +98,13 @@ export function CopyableValue({ value, className }) {
  * the address is shown in full beside it, so the user can still select it by hand. */
 function CopyButton({ value }) {
   const [state, setState] = useState('idle'); // 'idle' | 'copied' | 'failed'
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const handleCopy = () => {
     const finish = (next) => {
       setState(next);
-      setTimeout(() => setState('idle'), 1500);
+      clearTimeout(timer.current); // a second click restarts the 1.5 s instead of inheriting the first one's end
+      timer.current = setTimeout(() => setState('idle'), 1500);
     };
     if (!navigator.clipboard) {
       finish('failed');
@@ -113,20 +116,28 @@ function CopyButton({ value }) {
     );
   };
   return (
-    <button type="button" className="btn-primary" onClick={handleCopy} aria-live="polite">
-      {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy address'}
-    </button>
+    <>
+      <button type="button" className="btn-primary" onClick={handleCopy}>
+        {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy address'}
+      </button>
+      {/* A button's own text change is not reliably read out, so a separate status line says it. */}
+      <span className="sr-only" role="status">
+        {state === 'copied' ? 'Address copied' : state === 'failed' ? 'Copy failed' : ''}
+      </span>
+    </>
   );
 }
 
 /** The "Share" button: the phone's own share sheet (messages, mail, notes ...) with the address in
  * it. The Web Share API is missing on many desktop browsers, and a button that does nothing is worse
- * than none, so it is simply not drawn there. The promise rejects when the user closes the sheet
- * without choosing; there is nothing to do about that. */
+ * than none, so it is simply not drawn there. The promise rejects with `AbortError` when the user
+ * closes the sheet without choosing, which is not an error; anything else is logged. */
 function ShareButton({ value }) {
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return null;
   const handleShare = () => {
-    navigator.share({ title: 'My Clutch deposit address', text: String(value) }).catch(() => {});
+    navigator.share({ title: 'My Clutch deposit address', text: String(value) }).catch((err) => {
+      if (err?.name !== 'AbortError') console.error('share failed', err);
+    });
   };
   return (
     <button type="button" className="btn-secondary" onClick={handleShare}>
