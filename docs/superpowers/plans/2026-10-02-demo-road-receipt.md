@@ -20,7 +20,7 @@
 - **Palette** (exact): asphalt `#14181c`, concrete `#eceee8`, paper `#fdfdf8`, sign `#0a5c45`, lane `#e8b923`, caution `#b8420c`. Same as `:root` in `clutchprotocol.github.io/styles.css`.
 - **Copy rules:** sentence case, plain words, no all-caps labels, no emoji, no icons. A button keeps the same name through a flow ("Pay" stays "Pay").
 - **Type:** Barlow Condensed (titles, big numbers), Barlow (text), IBM Plex Mono (addresses, hashes, prices, receipts).
-- **Motion:** the only ambient motion is `.r-print` (a receipt line printing in). No pulsing dots, no new transitions.
+- **Motion:** the only ambient motion is `.r-print` (a receipt line printing in). No pulsing dots and no other animation that runs by itself. The meter fill and the sheet slide stay, because they answer a tap.
 - **Do not touch:** `packages/sdk`, `services/hub-api`, the SDK calls and signing code inside the components (`handlePay`, `handleCancel`, `handleAcceptOffer`, `handleCancelRequest`, the subscriptions), and anything listed under "Not in this change" in the spec.
 
 ## File Structure
