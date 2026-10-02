@@ -84,13 +84,13 @@ Body text 16 px. Inputs 16 px (no iOS zoom). Primary and secondary buttons at le
 
 CSS (all rewritten in place, import order in `App.css` unchanged): `index.css`, `styles/shell.css`, `entry.css`, `wallet.css`, `primitives.css`, `map.css`, `sections.css`, `explorer.css`, `forms.css`, `trip.css`, `responsive.css`, `overlays.css`.
 
-JSX: `App.jsx`, `ActiveTripCard.jsx`, `CompletedTripCard.jsx`, `RideRequestCard.jsx`, `DriverView.jsx`, `PassengerView.jsx`, `NetworkView.jsx`, `RoleEntry.jsx`, `BalanceDisplay.jsx`, `TransactionHistoryPage.jsx`, `layout/OverlayPanel.jsx`, `utils/mapMarkers.js`, `main.jsx`. New: `receipt.jsx`, `RouteLine.jsx`. Deleted: `Icon.jsx` (its two uses go).
+JSX: `App.jsx`, `ActiveTripCard.jsx`, `CompletedTripCard.jsx`, `RideRequestCard.jsx`, `DriverView.jsx`, `PassengerView.jsx`, `NetworkView.jsx`, `RoleEntry.jsx`, `TransactionHistoryPage.jsx`, `layout/OverlayPanel.jsx`, `utils/mapMarkers.js`, `main.jsx`. New: `receipt.jsx`, `RouteLine.jsx`. Deleted: `Icon.jsx` (its two uses go).
 
-Other: `src/fonts/*` (7 `woff2`, 3 licenses), `utils/money.js` (`paidPercent`), `utils/money.test.js`, `public/clutch-logo.svg`, `public/manifest.webmanifest`, `vite.config.js` (manifest), `index.html` (`theme-color`), `apps/demo/CLAUDE.md` (styling section).
+Other: `src/fonts/*` (7 `woff2`, 3 licenses), `utils/paidPercent.js` and `utils/paidPercent.test.js` (a new file with no imports, because `money.js` imports the SDK and the test should not need an SDK build), `public/clutch-logo.svg`, `public/manifest.webmanifest`, `vite.config.js` (manifest), `index.html` (`theme-color`, iOS status bar style `black`), `apps/demo/CLAUDE.md` (styling section).
 
 ## Verification
 
-No local build (house rule). CI is the gate: lint, `npm test` and the image build. A new test, `utils/money.test.js`, covers `paidPercent` (zero fare, partial, full, overpaid). Visual checks: the design board screenshots from this review are the reference; after the merge, compare stage at 360, 390, 430 and 1280 px.
+No local build (house rule). CI is the gate: lint, `npm test` and the image build. A new test, `utils/paidPercent.test.js`, covers `paidPercent` (zero fare, partial, full, overpaid). Visual checks: the design board screenshots from this review are the reference; after the merge, compare stage at 360, 390, 430 and 1280 px.
 
 ## Rollout
 
