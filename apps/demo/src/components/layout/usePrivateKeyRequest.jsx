@@ -52,9 +52,9 @@ export function usePrivateKeyRequest() {
 
   const PrivateKeyModal = useCallback(() => {
     if (!open) return null;
-    // Rendered into <body>, not where the hook is used. The bottom sheet has a CSS transform, which makes it
-    // the containing block of a position: fixed child, so inside the sheet this dialog was laid out against
-    // the sheet and on phones its buttons could end up under the nav.
+    // Rendered into <body>, not where the hook is used. Inside the bottom sheet this dialog was trapped twice:
+    // the sheet's CSS transform makes it the containing block of a position: fixed child, and the sheet is a
+    // stacking context at z-index 1010, below the top bar and the nav. A portal frees it from both.
     return createPortal(
       <div
         className="pk-modal-overlay"
