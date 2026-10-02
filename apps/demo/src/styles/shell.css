@@ -222,6 +222,10 @@ body {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.app-menu-wallet-address:focus-visible {
+  outline-color: #fff;
+}
+
 .app-menu-profile-wallet-empty {
   font-size: 0.95rem;
   color: #bcd2c8;

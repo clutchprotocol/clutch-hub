@@ -30,4 +30,6 @@ test('accepts the number and string forms the wire sends', () => {
 test('does not lose precision above 2^53', () => {
   const total = 9_007_199_254_740_993n * 10n;
   assert.equal(paidPercent(total / 2n, total), 50);
+  // A float divide rounds both numbers to 90071992547409936 and gives 100.
+  assert.equal(paidPercent(total - 1n, total), 99);
 });

@@ -25,10 +25,6 @@
     padding: env(safe-area-inset-top) 1.5rem 0;
     font-size: 1.35rem;
   }
-
-  .update-prompt {
-    bottom: 1.5rem;
-  }
 }
 
 @media (max-width: 640px) {
@@ -51,29 +47,6 @@
   }
 }
 
-/* Narrow phones: keep the top bar on one line. The road-dash mark goes first, then the address chip
-   (it is in the menu too). The environment tag stays: it is the one that must always be visible. */
-@media (max-width: 430px) {
-  .top-pill--logo::before {
-    display: none;
-  }
-
-  .top-pill--logo .top-bar-logo-text {
-    font-size: 1.5rem;
-  }
-
-  .top-pill--wallet {
-    padding: 0.35rem 0.5rem;
-    font-size: 0.75rem;
-  }
-
-  .top-pill--menu {
-    padding: 0.4rem 0.65rem;
-  }
-}
-
-@media (max-width: 370px) {
-  .top-pill--wallet {
-    display: none;
-  }
-}
+/* The narrow-phone top bar rules and the wide-screen update prompt position are in overlays.css,
+   after the base rules they override. This file loads before overlays.css, so same-specificity
+   rules here would lose. */

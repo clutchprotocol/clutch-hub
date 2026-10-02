@@ -73,7 +73,7 @@
 
 .role-entry-button:focus-visible {
   outline-color: var(--lane);
-  outline-offset: 3px;
+  outline-offset: -6px;
 }
 
 .role-entry-text {

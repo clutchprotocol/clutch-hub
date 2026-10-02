@@ -193,6 +193,33 @@ button.top-pill--menu:hover {
   color: var(--asphalt);
 }
 
+/* Narrow phones: keep the top bar on one line. The road-dash mark goes first, then the address chip
+   (it is in the menu too). The environment tag stays: it is the one that must always be visible. */
+@media (max-width: 430px) {
+  .top-pill--logo::before {
+    display: none;
+  }
+
+  .top-pill--logo .top-bar-logo-text {
+    font-size: 1.5rem;
+  }
+
+  .top-pill--wallet {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .top-pill--menu {
+    padding: 0.4rem 0.65rem;
+  }
+}
+
+@media (max-width: 370px) {
+  .top-pill--wallet {
+    display: none;
+  }
+}
+
 /* ===== Bottom sheet ===== */
 .bottom-sheet {
   position: fixed;
@@ -619,4 +646,14 @@ button.top-pill--menu:hover {
   line-height: 1;
   padding: 0 0.2rem;
   color: #b4bcb7;
+}
+
+.update-prompt :focus-visible {
+  outline-color: var(--lane);
+}
+
+@media (min-width: 1024px) {
+  .update-prompt {
+    bottom: 1.5rem;
+  }
 }

@@ -3,7 +3,7 @@
  *
  * Integer math on purpose, like utils/money.js: fares are bigint CLT base units, and a float divide
  * would lose the last digits on a large fare. It rounds down, so the meter never shows 100 before the
- * fare is fully paid. A zero or missing fare reads as 0, and an overpaid fare is held at 100, so the
+ * fare is fully paid. A zero fare reads as 0, and an overpaid fare is held at 100, so the
  * receipt meter never draws outside its frame.
  *
  * Kept free of imports (money.js pulls in the SDK) so its test needs no SDK build.

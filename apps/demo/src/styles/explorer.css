@@ -51,6 +51,15 @@
   background: var(--asphalt);
 }
 
+/* The segments fill the box and the box clips, so the ring goes inside. */
+.explorer-tab:focus-visible {
+  outline-offset: -5px;
+}
+
+.explorer-tabs--pill .explorer-tab.active:focus-visible {
+  outline-color: var(--lane);
+}
+
 .explorer-tabs--underline .explorer-tab {
   margin-bottom: -2px;
   border-bottom: 4px solid transparent;
