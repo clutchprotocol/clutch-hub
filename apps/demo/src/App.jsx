@@ -12,7 +12,7 @@ import { OverlayPanel } from './components/layout';
 import { WalletBackupExport } from './components/WalletBackup';
 import UpdatePrompt from './components/UpdatePrompt';
 import { truncAddr } from './utils/address';
-import { EXPLORER_URL } from './config';
+import { EXPLORER_URL, IS_TESTNET } from './config';
 import './App.css';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
@@ -151,8 +151,9 @@ function App() {
 
       <header className="top-bar">
         <div className="top-pill top-pill--logo">
-          <img src="/clutch-logo.svg" alt="Clutch" className="app-logo-icon" width={22} height={22} />
-          <span className="top-bar-logo-text">Clutch Stage</span>
+          <span className="top-bar-logo-text">Clutch</span>
+          {/* A test network says so on every screen; the mainnet shows no tag. */}
+          {IS_TESTNET && <span className="env-tag">Test network</span>}
         </div>
         <div className="top-bar-right">
           {userProfile.publicKey && (
@@ -171,7 +172,7 @@ function App() {
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           >
-            ☰
+            Menu
           </button>
         </div>
       </header>
@@ -186,8 +187,8 @@ function App() {
             in the docs. */}
         <ExplorerTabs
           tabs={[
-            { id: 'transactions', label: 'Tx', icon: '📋' },
-            { id: 'network', label: 'Network', icon: '🔍' },
+            { id: 'transactions', label: 'Transactions' },
+            { id: 'network', label: 'Network' },
           ]}
           activeTab={hubSubTab}
           onTabChange={setHubSubTab}
@@ -283,9 +284,6 @@ function App() {
             }
           }}
         >
-          <span className="bottom-nav-icon" aria-hidden>
-            {mode === 'driver' ? '🚕' : '🚗'}
-          </span>
           <span className="bottom-nav-label">Rides</span>
         </button>
 
@@ -302,9 +300,6 @@ function App() {
             }
           }}
         >
-          <span className="bottom-nav-icon" aria-hidden>
-            ✅
-          </span>
           <span className="bottom-nav-label">Recent</span>
         </button>
 
@@ -313,9 +308,6 @@ function App() {
           className={`bottom-nav-item ${activeTab === 'hub' ? 'active' : ''}`}
           onClick={() => setActiveTab('hub')}
         >
-          <span className="bottom-nav-icon" aria-hidden>
-            ⋯
-          </span>
           <span className="bottom-nav-label">More</span>
         </button>
       </nav>
@@ -331,18 +323,12 @@ function App() {
                 onClick={() => setMenuOpen(false)}
                 aria-label="Close menu"
               >
-                ×
+                Close
               </button>
             </div>
             <div className="card app-menu-card">
-              <div className="app-menu-section-header">
-                <span className="app-menu-section-label">Profile</span>
-              </div>
               <div className="app-menu-profile-card">
                 <div className="app-menu-profile-head">
-                  <div className="app-menu-profile-avatar" aria-hidden>
-                    {mode === 'driver' ? 'D' : 'P'}
-                  </div>
                   <div>
                     <div className="app-menu-profile-role-label">Role</div>
                     <div className="app-menu-profile-role-value">

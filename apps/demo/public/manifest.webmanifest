@@ -1,12 +1,12 @@
 {
-  "name": "Clutch Stage",
+  "name": "Clutch",
   "short_name": "Clutch",
   "description": "Clutch decentralized ride-sharing demo",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#060e20",
-  "theme_color": "#060e20",
+  "background_color": "#14181c",
+  "theme_color": "#14181c",
   "icons": [
     {
       "src": "/clutch-logo.svg",
