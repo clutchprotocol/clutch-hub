@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MapFitBounds from './MapFitBounds';
+import RouteLine from './RouteLine';
+import { pickupIcon, dropoffIcon } from '../utils/mapMarkers';
 import ActiveTripCard from './ActiveTripCard';
 import CompletedTripCard from './CompletedTripCard';
 import ExplorerTabs from './ExplorerTabs';
@@ -13,7 +15,6 @@ import { API_URL, MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import { useClutchSdk } from '../hooks/useClutchSdk';
 import { truncAddr } from '../utils/address';
 import { formatUsd } from '../utils/money';
-import Icon from './Icon';
 import {
   subscribeActiveTripsCompat,
   subscribeRecentTripsCompat,
@@ -155,15 +156,14 @@ const NetworkView = () => {
             {loading ? <span className="status-dot" /> : apiOk ? <span className="status-dot status-dot--live" /> : <span className="status-dot status-dot--error" />}
             {loading ? 'Checking...' : error ? 'API Offline' : apiOk ? 'Hub Online' : 'API Unknown'}
           </span>
-          <Icon name="sensors" size={22} className="network-sensors-icon" />
         </div>
       </div>
       <div className="explorer-tabs-scroll">
         <ExplorerTabs
           tabs={[
-            { id: 'requests', label: 'Ride Requests', icon: '📍', count: rideRequests.length },
-            { id: 'trips', label: 'Active Trips', icon: '🚗', count: activeTrips.length },
-            { id: 'recent', label: 'Recent rides', icon: '✅', count: recentTrips.length },
+            { id: 'requests', label: 'Ride requests', count: rideRequests.length },
+            { id: 'trips', label: 'Active trips', count: activeTrips.length },
+            { id: 'recent', label: 'Recent rides', count: recentTrips.length },
           ]}
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -182,7 +182,6 @@ const NetworkView = () => {
           {rideRequests.length > 0 && (
             <>
               <div className="map-wrapper network-map-wrapper">
-                <div className="map-gradient-overlay" />
                 <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} className="network-map" style={{ width: '100%' }}>
                   <TileLayer url={MAP_TILE_URL} attribution={MAP_ATTRIBUTION} />
                   <MapFitBounds
@@ -199,6 +198,7 @@ const NetworkView = () => {
                     <Marker
                       key={req.txHash}
                       position={[req.pickupLocation.latitude, req.pickupLocation.longitude]}
+                      icon={pickupIcon}
                       eventHandlers={{
                         click: () => setSelectedTxHash((prev) => (prev === req.txHash ? null : req.txHash)),
                       }}
@@ -214,16 +214,16 @@ const NetworkView = () => {
                   ))}
                   {selectedTxHash && selectedRequest && (
                     <>
-                      <Polyline
+                      <RouteLine
                         positions={[
                           [selectedRequest.pickupLocation.latitude, selectedRequest.pickupLocation.longitude],
                           [selectedRequest.dropoffLocation.latitude, selectedRequest.dropoffLocation.longitude],
                         ]}
-                        color="var(--accent)"
-                        weight={3}
-                        opacity={0.8}
                       />
-                      <Marker position={[selectedRequest.dropoffLocation.latitude, selectedRequest.dropoffLocation.longitude]}>
+                      <Marker
+                        position={[selectedRequest.dropoffLocation.latitude, selectedRequest.dropoffLocation.longitude]}
+                        icon={dropoffIcon}
+                      >
                         <Popup>
                           <div style={{ maxWidth: 240, fontSize: '0.8rem' }}>
                             <strong>Dropoff</strong> &mdash; {formatUsd(selectedRequest.fare)}
@@ -250,18 +250,13 @@ const NetworkView = () => {
                   ) : (
                     offers.map((offer) => (
                       <div key={offer.txHash} className="offer-row offer-row--driver">
-                        <div className="offer-row-driver" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div className="offer-avatar" style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-container), var(--primary-dim))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Icon name="directions_car" size={20} fill={1} className="text-on-primary-fixed" />
-                          </div>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--on-surface)', margin: 0 }}>{truncAddr(offer.driverAddress)}</p>
-                            <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--on-surface-variant)', margin: '0.15rem 0 0 0' }}>Driver</p>
+                        <div className="offer-row-driver">
+                          <div className="offer-row-driver-meta">
+                            <p className="offer-row-driver-address">{truncAddr(offer.driverAddress)}</p>
+                            <p className="offer-row-driver-label">Driver</p>
                           </div>
                         </div>
-                        <div>
-                          <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--on-surface)', margin: 0 }} title={`${offer.fare} CLT`}>{formatUsd(offer.fare)}</p>
-                        </div>
+                        <div className="offer-row-price" title={`${offer.fare} CLT`}>{formatUsd(offer.fare)}</div>
                       </div>
                     ))
                   )}

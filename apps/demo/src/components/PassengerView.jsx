@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MapFitBounds from './MapFitBounds';
 import ActiveTripCard from './ActiveTripCard';
 import CompletedTripCard from './CompletedTripCard';
@@ -21,6 +21,7 @@ import TransactionHistory from './TransactionHistory';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { pickupIcon, dropoffIcon, currentLocationIcon } from '../utils/mapMarkers';
 import MapLegend from './MapLegend';
+import RouteLine from './RouteLine';
 import RideRequestCard from './RideRequestCard';
 import { LocationSelector, MapCenterTracker, MapFlyToLocation } from './MapControls';
 import { formatPassengerOpenRequests } from '../utils/passengerRequests';
@@ -401,7 +402,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
                 <React.Fragment key={r.txHash}>
                   <Marker position={[r.pickup.lat, r.pickup.lng]} icon={pickupIcon}><Popup>Pickup (awaiting offers)</Popup></Marker>
                   <Marker position={[r.dropoff.lat, r.dropoff.lng]} icon={dropoffIcon}><Popup>Dropoff (awaiting offers)</Popup></Marker>
-                  <Polyline positions={[[r.pickup.lat, r.pickup.lng], [r.dropoff.lat, r.dropoff.lng]]} color="#94a3b8" weight={3} opacity={0.75} />
+                  <RouteLine positions={[[r.pickup.lat, r.pickup.lng], [r.dropoff.lat, r.dropoff.lng]]} pending />
                 </React.Fragment>
               )
             ))}
@@ -410,7 +411,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
               <React.Fragment key={t.txHash}>
                 <Marker position={[Number(t.pickupLocation.latitude), Number(t.pickupLocation.longitude)]} icon={pickupIcon}><Popup>Pickup (active trip)</Popup></Marker>
                 <Marker position={[Number(t.dropoffLocation.latitude), Number(t.dropoffLocation.longitude)]} icon={dropoffIcon}><Popup>Dropoff (active trip)</Popup></Marker>
-                <Polyline positions={[[Number(t.pickupLocation.latitude), Number(t.pickupLocation.longitude)], [Number(t.dropoffLocation.latitude), Number(t.dropoffLocation.longitude)]]} color="var(--accent)" weight={4} opacity={0.9} />
+                <RouteLine positions={[[Number(t.pickupLocation.latitude), Number(t.pickupLocation.longitude)], [Number(t.dropoffLocation.latitude), Number(t.dropoffLocation.longitude)]]} />
               </React.Fragment>
             ))}
 
@@ -431,12 +432,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
             {!hasActiveTrip && pickup && <Marker position={pickup} icon={pickupIcon}><Popup>Pickup</Popup></Marker>}
             {!hasActiveTrip && dropoff && <Marker position={dropoff} icon={dropoffIcon}><Popup>Dropoff</Popup></Marker>}
             {!hasActiveTrip && pickup && dropoff && (
-              <Polyline
-                positions={[[pickup.lat, pickup.lng], [dropoff.lat, dropoff.lng]]}
-                color="var(--accent)"
-                weight={3}
-                opacity={0.8}
-              />
+              <RouteLine positions={[[pickup.lat, pickup.lng], [dropoff.lat, dropoff.lng]]} />
             )}
           </MapContainer>
         )}
@@ -451,11 +447,11 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
 
       <div className="map-fabs">
         <button type="button" className="map-fab" onClick={handleUseCurrentLocation} disabled={locating}>
-          {locating ? 'Locating…' : '📍 My location'}
+          {locating ? 'Locating…' : 'My location'}
         </button>
         {phase === 'building' && (pickup || dropoff) && (
           <button type="button" className="map-fab" onClick={handleReset} disabled={isLoading}>
-            ↺ Reset
+            Reset
           </button>
         )}
       </div>

@@ -40,9 +40,6 @@ const RoleEntry = ({
             className="role-entry-button role-entry-button--passenger"
             onClick={() => onSelectRole('passenger')}
           >
-            <span className="role-entry-emoji" aria-hidden="true">
-              🧍
-            </span>
             <div className="role-entry-text">
               <span className="role-entry-label">Passenger</span>
               <span className="role-entry-hint">Request rides and pay instantly.</span>
@@ -54,9 +51,6 @@ const RoleEntry = ({
             className="role-entry-button role-entry-button--driver"
             onClick={() => onSelectRole('driver')}
           >
-            <span className="role-entry-emoji" aria-hidden="true">
-              🚗
-            </span>
             <div className="role-entry-text">
               <span className="role-entry-label">Driver</span>
               <span className="role-entry-hint">Accept rides and track earnings.</span>

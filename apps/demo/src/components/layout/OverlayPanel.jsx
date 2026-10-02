@@ -16,7 +16,7 @@ const OverlayPanel = ({ open, title, onClose, children }) => (
     <div className="overlay-panel-header">
       <h2 className="overlay-panel-title">{title}</h2>
       <button type="button" className="overlay-panel-close" onClick={onClose} aria-label="Close">
-        ×
+        Close
       </button>
     </div>
     <div className="overlay-panel-body">{children}</div>
