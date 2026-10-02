@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { paidPercent } from './paidPercent.js';
 
-test('a zero or missing fare reads as 0', () => {
+test('a zero fare reads as 0', () => {
   assert.equal(paidPercent(0n, 0n), 0);
   assert.equal(paidPercent(5n, 0n), 0);
 });

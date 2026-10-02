@@ -191,8 +191,9 @@
 }
 
 /* One line prints in, top to bottom, in five steps. */
+/* No fill-mode on purpose: a clip-path left on the finished row would clip the focus ring of a button inside it. */
 .r-print {
-  animation: r-print 0.3s steps(5) both;
+  animation: r-print 0.3s steps(5);
 }
 
 @keyframes r-print {

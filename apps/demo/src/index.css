@@ -181,8 +181,6 @@
   --glass-bg-strong: var(--concrete);
   --leaflet-container-bg: var(--concrete-2);
   --leaflet-attribution-bg: rgba(236, 238, 232, 0.92);
-  --map-gradient-overlay-start: transparent;
-  --map-gradient-overlay-mid: transparent;
 }
 
 * {
