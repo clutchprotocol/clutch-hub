@@ -6,6 +6,7 @@ import { Row } from './receipt';
 import QrCode from './QrCode';
 import { formatExactUsdt } from '../utils/money';
 import { depositTerms } from '../utils/depositTerms';
+import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
 
 /** `truncHash`/`timeAgo`, copied from `TransactionHistory.jsx` (module-private there, not
  * exported) rather than imported — a few duplicated lines beat coupling this panel to a
@@ -269,9 +270,14 @@ const DepositPanel = ({ userProfile, open }) => {
           if (!cancelled) setUnavailable(true);
           return;
         }
-        const body = await res.json();
+        // Read as text: a refused account gets an empty 401 or 403, and `res.json()` on that is the
+        // "Unexpected end of JSON input" a person saw on mainnet. See `orchestratorReply.js`.
+        const body = await readJsonBody(res);
         if (!res.ok) {
-          throw new Error(body.error || `deposit request failed (${res.status})`);
+          throw new Error(body.error || refusalMessage(res.status, `deposit request failed (${res.status})`));
+        }
+        if (!body.address) {
+          throw new Error('The service sent no deposit address. Please try again.');
         }
         if (!cancelled) {
           setAddress(body.address);
