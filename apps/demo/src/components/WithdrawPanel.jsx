@@ -6,6 +6,7 @@ import { CopyableValue } from './DepositPanel';
 import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { useConfirmDialog } from './layout/useConfirmDialog.jsx';
 import { parseUsdToClt } from '../utils/money';
+import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
 import {
   REDEMPTION_STATUS_LABELS,
   loadRedemption,
@@ -203,10 +204,10 @@ const WithdrawPanel = ({ userProfile, open }) => {
           setUnavailable(true);
           return;
         }
-        // `.catch` because a 502 from nginx is an HTML page, and "Unexpected token '<'" is a
-        // worse thing to show someone than the status-coded fallback below.
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body.error || `withdrawal request failed (${res.status})`);
+        // A 502 from nginx is an HTML page and a refused account gets an empty body: neither is
+        // JSON, and "Unexpected token '<'" is a worse thing to show someone than the words below.
+        const body = await readJsonBody(res);
+        if (!res.ok) throw new Error(body.error || refusalMessage(res.status, `withdrawal request failed (${res.status})`));
         if (!body.id || !body.redemption_ref) {
           throw new Error('the withdrawal service returned no reference — nothing was burned');
         }
