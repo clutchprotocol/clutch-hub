@@ -362,11 +362,12 @@ const DepositPanel = ({ userProfile, open }) => {
 
           <div className="deposit-rows">
             {terms ? (
-              // A GasFree address: the relay's fee comes out of each deposit (GasFree design §2), so the
-              // user is told the most it can be, and what to send for anything to be credited.
+              // A GasFree address: the relay's fee comes out of each deposit (GasFree design §2). The
+              // treasury takes the configured maximum, not the live fee, so the user is told that amount
+              // plainly, and what to send for anything to be credited.
               <>
                 <Row label="Send at least">{terms.sendAtLeast} USDT</Row>
-                <Row label="Network fee">up to {terms.feeUpTo} USDT</Row>
+                <Row label="Network fee">{terms.feeUpTo} USDT</Row>
                 <Row label="Minimum after fee">{terms.minimum} USDT</Row>
               </>
             ) : (
@@ -374,6 +375,17 @@ const DepositPanel = ({ userProfile, open }) => {
             )}
             <Row label="Credited as">CLT</Row>
           </div>
+
+          {terms && (
+            // The difference between what is taken and what the relay charges is not refunded. Said here,
+            // before the user pays, because the amount above is the most the relay can charge and not
+            // always what it does charge.
+            <p className="r-note">
+              The treasury takes the network fee from your top-up and pays the relay that moves the USDT.
+              The relay may charge less. The difference is not refunded: it stays in the reserve as extra
+              backing.
+            </p>
+          )}
 
           {IS_TESTNET && <TestnetFaucetGuide />}
         </>

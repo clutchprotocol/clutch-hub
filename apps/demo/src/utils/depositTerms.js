@@ -1,9 +1,11 @@
 /**
  * What a user must know before paying a GasFree deposit address (clutch-treasury's GasFree design,
- * §2). The relay's fee is taken from each deposit, and the orchestrator reports the most it can be:
- * "up to" — the configured maximum, never the live fee. After the fee, a deposit must still reach the
- * minimum, or nothing is minted and it waits for a human. So a user must send at least the two
- * together.
+ * §2). The relay's fee is taken from each deposit. The orchestrator reports the amount the treasury
+ * takes: the configured maximum, never the live fee (`fee_up_to_usdt`, named for the most the relay can
+ * charge). The panel shows it as the network fee, and says that the relay may charge less and that the
+ * difference stays in the reserve (the maintainer's decision of 2026-10-05: say it plainly, not "up
+ * to"). After the fee, a deposit must still reach the minimum, or nothing is minted and it waits for a
+ * human. So a user must send at least the two together.
  *
  * `body` is the orchestrator's `POST /api/v1/deposits` answer. A plain address carries neither field
  * and gets `null`: nothing is taken from it.
