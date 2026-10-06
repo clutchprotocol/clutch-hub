@@ -55,6 +55,18 @@ impl SignatureKeys {
         bytes
     }
 
+    /// The bytes TronLink's `signMessageV2` (TIP-191, the TRON twin of EIP-191) puts through
+    /// Keccak-256: `"\x19TRON Signed Message:\n"`, the message length in decimal, then the message.
+    ///
+    /// A TRON account is an Ethereum-type key: the same curve, the same Keccak-256 and the same 20
+    /// address bytes (TRON writes them in base58 with a `0x41` prefix). Only this prefix differs
+    /// from `personal_sign_bytes`, so the two digests of one text never meet.
+    pub fn tron_sign_bytes(message: &[u8]) -> Vec<u8> {
+        let mut bytes = format!("\x19TRON Signed Message:\n{}", message.len()).into_bytes();
+        bytes.extend_from_slice(message);
+        bytes
+    }
+
     pub fn sign(secret_key: &str, data: &[u8]) -> (String, String, i32) {
         let secp = Secp256k1::new();
 
@@ -290,6 +302,33 @@ mod tests {
         assert_eq!(
             hex::encode(digest),
             "a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"
+        );
+    }
+
+    #[test]
+    fn tron_sign_bytes_has_the_tip191_layout() {
+        assert_eq!(
+            SignatureKeys::tron_sign_bytes(b"hello"),
+            b"\x19TRON Signed Message:\n5hello".to_vec()
+        );
+        // The length counts bytes, not characters: "é" is two bytes.
+        assert_eq!(
+            SignatureKeys::tron_sign_bytes("é".as_bytes()),
+            "\x19TRON Signed Message:\n2é".as_bytes().to_vec()
+        );
+        // The length is written in decimal, however many digits it needs.
+        let long = "x".repeat(123);
+        let mut expected = b"\x19TRON Signed Message:\n123".to_vec();
+        expected.extend_from_slice(long.as_bytes());
+        assert_eq!(SignatureKeys::tron_sign_bytes(long.as_bytes()), expected);
+    }
+
+    #[test]
+    fn the_tron_and_ethereum_digests_of_one_text_differ() {
+        let text = b"clutch-auth:1000:0xabcd:1751500000";
+        assert_ne!(
+            Keccak256::digest(SignatureKeys::tron_sign_bytes(text)),
+            Keccak256::digest(SignatureKeys::personal_sign_bytes(text))
         );
     }
 }

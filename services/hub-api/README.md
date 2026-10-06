@@ -21,7 +21,7 @@ Rust backend bridging applications to the Clutch Node blockchain via GraphQL.
 
 ## Authentication
 
-Wallet-based JWT — no username/password. Token issuance requires proof of key ownership: sign the challenge `clutch-auth:{chain_id}:{publicKey}:{timestamp}` (unix seconds, ±120s window). Two signatures are accepted: a key that signs the Keccak-256 hash string of the challenge (the SDK with a local key does this), or a wallet such as MetaMask or Trust Wallet that signs the challenge text itself with `personal_sign`. The SDK does both automatically:
+Wallet-based JWT — no username/password. Token issuance requires proof of key ownership: sign the challenge `clutch-auth:{chain_id}:{publicKey}:{timestamp}` (unix seconds, ±120s window). Three signatures are accepted: a key that signs the Keccak-256 hash string of the challenge (the SDK with a local key does this), a wallet such as MetaMask or Trust Wallet that signs the challenge text itself with `personal_sign`, or TronLink, which signs the same text with `signMessageV2` (TIP-191, the prefix `\x19TRON Signed Message:\n`). The SDK does all of them automatically:
 
 ```graphql
 mutation {
