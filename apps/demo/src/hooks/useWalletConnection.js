@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { connectWallet, createWalletSigner, discoverInjectedWallets } from 'clutch-hub-sdk-js';
+import {
+  connectWallet,
+  createSignerFor,
+  discoverInjectedWallets,
+  sharedWalletAccount,
+  watchWalletAccounts,
+} from 'clutch-hub-sdk-js';
 import {
   describeWalletError,
-  firstAccount,
   forgetWalletId,
   recallWalletId,
   rememberWalletId,
@@ -12,17 +17,18 @@ import {
 export const NO_PROFILE = Object.freeze({ publicKey: '', signer: null });
 
 function profileFor(wallet, account) {
-  const signer = createWalletSigner(wallet.provider, account);
+  const signer = createSignerFor(wallet, account);
   return { publicKey: signer.address, signer };
 }
 
 /**
- * The wallet the person connected (MetaMask, Trust Wallet, ...). The app holds no key: it holds a
- * signer that asks the wallet, and every signature is a prompt in the wallet.
+ * The wallet the person connected (MetaMask, Trust Wallet, TronLink, ...). The app holds no key: it
+ * holds a signer that asks the wallet, and every signature is a prompt in the wallet. The SDK knows
+ * how each kind of wallet connects and signs, so nothing here depends on which one it is.
  *
  * - Looks for wallets when it starts.
  * - Connects again by itself on the next visit, without a prompt, when the wallet used last time
- *   still shares an account with this site (`eth_accounts` never opens a prompt).
+ *   still shares an account with this site (`sharedWalletAccount` never opens a prompt).
  * - Follows the wallet: another account becomes the signed-in account, and a wallet that stops
  *   sharing the site disconnects the app.
  *
@@ -81,7 +87,7 @@ export function useWalletConnection() {
       const wallet = found.find((candidate) => candidate.id === remembered);
       if (!wallet) return;
       try {
-        const account = firstAccount(await wallet.provider.request({ method: 'eth_accounts' }));
+        const account = await sharedWalletAccount(wallet);
         if (account && !cancelled) {
           setConnected({ wallet, profile: profileFor(wallet, account) });
         }
@@ -97,12 +103,10 @@ export function useWalletConnection() {
   // Follow the wallet while it is connected.
   const connectedWallet = connected?.wallet ?? null;
   useEffect(() => {
-    const provider = connectedWallet?.provider;
-    if (!provider?.on) return undefined;
-    const onAccountsChanged = (accounts) => {
-      const account = firstAccount(accounts);
+    if (!connectedWallet) return undefined;
+    return watchWalletAccounts(connectedWallet, (account) => {
       if (!account) {
-        disconnect(); // the site was disconnected in the wallet
+        disconnect(); // the site was disconnected in the wallet, or the wallet was locked
         return;
       }
       setConnected((current) =>
@@ -110,9 +114,7 @@ export function useWalletConnection() {
           ? current
           : { wallet: connectedWallet, profile: profileFor(connectedWallet, account) },
       );
-    };
-    provider.on('accountsChanged', onAccountsChanged);
-    return () => provider.removeListener?.('accountsChanged', onAccountsChanged);
+    });
   }, [connectedWallet, disconnect]);
 
   return {

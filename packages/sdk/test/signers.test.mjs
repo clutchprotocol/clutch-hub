@@ -5,6 +5,11 @@
 // and not from the SDK's own code; and two signatures are pinned that the node's and the Hub API's
 // Rust tests also pin (`a_signature_made_by_a_javascript_library_verifies`,
 // `javascript_wallet_fixture_verifies`), so a change on one side cannot pass quietly.
+//
+// TronLink signs with `signMessageV2` (TIP-191): the same, with the prefix "\x19TRON Signed
+// Message:\n". The second half of this file stands a fake TronLink next to the SDK, written from
+// TronLink's documentation, and pins two signatures that TronWeb 6.5.1 itself made. The Rust tests
+// pin the same two (`a_signature_tronweb_made_verifies`, `tronweb_fixture_verifies`).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as rlp from 'rlp';
@@ -15,10 +20,17 @@ import {
   addressFromPrivateKey,
   connectWallet,
   createLocalSigner,
+  createSignerFor,
+  createTronLinkSigner,
   createWalletSigner,
   discoverInjectedWallets,
   personalSignDigest,
+  sharedWalletAccount,
+  tronAddressToHex,
+  tronSignDigest,
+  walletAccountFrom,
   walletTransactionText,
+  watchWalletAccounts,
 } from '../dist/index.js';
 
 // The committed dev key used across the repo, and its address.
@@ -339,13 +351,23 @@ test('login without any key or signer says what is missing', async () => {
 
 // --- finding a wallet --------------------------------------------------------------------------
 
-/** A page with wallets that announce themselves, and perhaps a `window.ethereum`. */
-function fakePage({ announced = [], ethereum } = {}) {
+/**
+ * A page with wallets that announce themselves (EIP-6963 for Ethereum wallets, TIP-6963 for TRON
+ * ones), and perhaps a `window.ethereum`, `window.tron` or `window.tronLink`.
+ */
+function fakePage({ announced = [], tipAnnounced = [], ethereum, tron, tronLink } = {}) {
   const page = new EventTarget();
   page.ethereum = ethereum;
+  page.tron = tron;
+  page.tronLink = tronLink;
   page.addEventListener('eip6963:requestProvider', () => {
     for (const { info, provider } of announced) {
       page.dispatchEvent(Object.assign(new Event('eip6963:announceProvider'), { detail: { info, provider } }));
+    }
+  });
+  page.addEventListener('TIP6963:requestProvider', () => {
+    for (const { info, provider } of tipAnnounced) {
+      page.dispatchEvent(Object.assign(new Event('TIP6963:announceProvider'), { detail: { info, provider } }));
     }
   });
   return page;
@@ -415,4 +437,423 @@ test('connectWallet refuses an answer with no account', async () => {
       /did not share an account/
     );
   }
+});
+
+// --- TronLink -----------------------------------------------------------------------------------
+
+// The dev key's TRON address, as TronWeb writes it, and the one TronLink's documentation shows (key 1).
+const DEV_BASE58 = 'TWGmce4sb65jzLEr2qiwA42ntizH66cmXp';
+const KEY1_BASE58 = 'TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC';
+const KEY1_ADDRESS = '0x7e5f4552091a69125d5dfcb7b8c2659029395bdf';
+
+// Two signatures made by TronWeb 6.5.1 (`trx.signMessageV2(text, devKey)`), the library TronLink wraps.
+const TX_HASH = '6f1e0b5d3a9c4e7f8a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f';
+const TRONWEB_TX_SIGNATURE = {
+  r: '0x7f43dd8cb6b4ef174aa0da23faee41757521efcccd9a588052457f397e067494',
+  s: '0x41afed3dd9a654e351b37ebaccad69a3f94b07926d19896a67b5621517f1063d',
+  v: 27,
+};
+const AUTH_MESSAGE = `clutch-auth:1000:${DEV_ADDRESS}:1751500000`;
+const TRONWEB_AUTH_SIGNATURE = {
+  r: '0xbdb280546a1b7955be7ee2a31883f628a132e0b111af2b8f101ff2ee02f68972',
+  s: '0x5a80d3c656f7ae0b5571bf70fbfad550863ecc445d4402579ea32b271c92659f',
+  v: 28,
+};
+
+/** What TIP-191 hashes, worked out here with noble directly. It takes bytes, as the library does. */
+function tipDigest(bytes) {
+  const body = Buffer.from(bytes);
+  return keccak_256(Buffer.concat([Buffer.from(`\x19TRON Signed Message:\n${body.length}`), body]));
+}
+const isHexString = (text) => /^0x(?:[0-9a-fA-F]{2})*$/.test(text);
+
+/**
+ * A stand-in for TronLink, written from its documentation. `style` is what `signMessageV2` does
+ * with the string it gets (the documentation is not clear, so each reading is a style):
+ *   'plain-or-hex'  plain text is signed as UTF-8; a 0x hex string is decoded and its bytes are signed
+ *   'hex-only'      plain text is refused with "Invalid transaction provided"; a hex string is decoded
+ *   'hex-as-text'   plain text is refused like that, and a hex string is signed as the TEXT of the string
+ * `legacy` is an older TronLink: it does not know `eth_requestAccounts`. `tronWeb` is `false` until
+ * the person lets the site in, as the documentation says.
+ */
+function fakeTronLink({
+  key = DEV_KEY,
+  account = DEV_BASE58,
+  style = 'plain-or-hex',
+  legacy = false,
+  authorized = false,
+  rejectConnect = false,
+  rejectSign = false,
+} = {}) {
+  const requests = [];
+  const signed = [];
+  const tronWeb = {
+    ready: true,
+    defaultAddress: { base58: account },
+    trx: {
+      async signMessageV2(message) {
+        signed.push(message);
+        if (rejectSign) throw new Error('user rejected request'); // TronLink gives no code here
+        let bytes;
+        if (isHexString(message)) {
+          bytes = style === 'hex-as-text' ? Buffer.from(message, 'utf8') : Buffer.from(message.slice(2), 'hex');
+        } else if (style === 'plain-or-hex') {
+          bytes = Buffer.from(message, 'utf8');
+        } else {
+          throw new Error('Invalid transaction provided');
+        }
+        const sig = await secp.signAsync(tipDigest(bytes), key);
+        return '0x' + sig.toCompactHex() + (sig.recovery + 27).toString(16);
+      },
+    },
+  };
+  const listeners = new Map();
+  const provider = {
+    requests,
+    signed,
+    tronWeb: authorized ? tronWeb : false,
+    async request({ method }) {
+      requests.push(method);
+      if (method === 'eth_requestAccounts' && !legacy) {
+        if (rejectConnect) throw Object.assign(new Error('User rejected the request.'), { code: 4001 });
+        provider.tronWeb = tronWeb;
+        return [account];
+      }
+      if (method === 'eth_requestAccounts') {
+        throw Object.assign(new Error('Method not supported'), { code: 4200 });
+      }
+      if (method === 'tron_requestAccounts' && legacy) {
+        if (rejectConnect) return { code: 4001, message: 'rejected' };
+        provider.tronWeb = tronWeb;
+        return { code: 200, message: 'ok' };
+      }
+      throw new Error(`unsupported method ${method}`);
+    },
+    on(event, listener) {
+      listeners.set(event, [...(listeners.get(event) ?? []), listener]);
+    },
+    removeListener(event, listener) {
+      listeners.set(event, (listeners.get(event) ?? []).filter((l) => l !== listener));
+    },
+    emit(event, ...args) {
+      (listeners.get(event) ?? []).forEach((listener) => listener(...args));
+    },
+    listenerCount: (event) => (listeners.get(event) ?? []).length,
+  };
+  return provider;
+}
+
+const tronWallet = (provider) => ({ id: 'org.tronlink.www', name: 'TronLink', kind: 'tron', provider });
+
+test('tronSignDigest is the digest TronWeb signs: its own signatures recover to the dev account', () => {
+  const text = `clutch-tx:1000:${TX_HASH}`;
+  assert.equal(recover(tronSignDigest(text), TRONWEB_TX_SIGNATURE), DEV_ADDRESS);
+  assert.equal(recover(tronSignDigest(AUTH_MESSAGE), TRONWEB_AUTH_SIGNATURE), DEV_ADDRESS);
+  // The same function as the independent one above, and not the Ethereum digest.
+  assert.deepEqual(tronSignDigest(text), tipDigest(Buffer.from(text)));
+  assert.notEqual(recover(personalSignDigest(text), TRONWEB_TX_SIGNATURE), DEV_ADDRESS);
+});
+
+test('tronAddressToHex turns a TRON address into the Clutch address of the same key', () => {
+  // Each expected value comes from TronWeb's own `address.toHex`, less its 0x41 prefix.
+  const known = {
+    [DEV_BASE58]: DEV_ADDRESS,
+    [KEY1_BASE58]: KEY1_ADDRESS,
+    TZ5XixnRyraxJJy996Q1sip85PHWuj4793: '0xfd7d047d1164aad0f6c1ea4966449cd2e34df696',
+    TRKb2nAnCBfwxnLxgoKJro6VbyA6QmsuXq: '0xa864986e2983ba4aeebe02df656d7208f1bb3f14',
+    TN9RRaXkCFtTXRso2GdTZxSxxwufzxLQPP: '0x859009fd225692b11237a6ffd8fdba2eb7140cca',
+    TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t: '0xa614f803b6fd780986a42c78ec9c7f77e6ded13c',
+  };
+  for (const [base58, address] of Object.entries(known)) {
+    assert.equal(tronAddressToHex(base58), address, base58);
+  }
+  // The key 1 address also matches what the SDK works out from the key itself.
+  assert.equal(KEY1_ADDRESS, addressFromPrivateKey('0000000000000000000000000000000000000000000000000000000000000001'));
+  // The other forms of the same address are taken as they are.
+  assert.equal(tronAddressToHex('41DEB4CFB63DB134698E1879EA24904DF074726CC0'), DEV_ADDRESS);
+  assert.equal(tronAddressToHex('0xDEB4cfb63db134698e1879ea24904df074726cc0'), DEV_ADDRESS);
+});
+
+test('tronAddressToHex refuses what is not a TRON address', () => {
+  const bad = [
+    'TWGmce4sb65jzLEr2qiwA42ntizH66cmXq', // the last character changed: the checksum fails
+    'TWGmce4sb65jzLEr2qiwA42ntizH66cmX', // too short
+    'TWGmce4sb65jzLEr2qiwA42ntizH66cmXpp', // too long
+    'TWGmce4sb65jzLEr2qiwA42ntizH66cmX0', // "0" is not base58
+    'T', // no payload
+    '', // nothing
+    '0x1234', // a hex address of the wrong length
+    '1111111111111111111111111', // 25 bytes, which is the right length, but they do not start with 0x41
+    '1111111111111111111111111111111111', // 34 bytes
+  ];
+  for (const address of bad) {
+    assert.throws(() => tronAddressToHex(address), /not a TRON address|not a base58 character/, JSON.stringify(address));
+  }
+});
+
+test('a TronLink signer signs a transaction as the node test vector does', async () => {
+  const tron = fakeTronLink({ authorized: true });
+  // The base58 address TronLink shows is taken, and the signer works in the Clutch form.
+  const signer = createTronLinkSigner(tron, DEV_BASE58);
+  assert.equal(signer.address, DEV_ADDRESS);
+  assert.equal(signer.interactive, true);
+
+  const signature = await signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 });
+  // The same signature TronWeb made, and the node's `a_signature_tronweb_made_verifies` pins.
+  assert.deepEqual(signature, TRONWEB_TX_SIGNATURE);
+  // One prompt, with the readable text in plain form.
+  assert.deepEqual(tron.signed, [`clutch-tx:1000:${TX_HASH}`]);
+});
+
+test('a TronLink signer signs the login message as the Hub API test vector does', async () => {
+  const tron = fakeTronLink({ authorized: true });
+  const signer = createTronLinkSigner(tron, DEV_ADDRESS);
+  const signature = await signer.signAuthChallenge({ message: AUTH_MESSAGE, hashHex: 'unused-by-a-wallet' });
+
+  // The same signature TronWeb made, and the Hub API's `tronweb_fixture_verifies` pins.
+  assert.deepEqual(signature, TRONWEB_AUTH_SIGNATURE);
+  assert.deepEqual(tron.signed, [AUTH_MESSAGE], 'TronLink is shown the readable message');
+});
+
+test('a TronLink that takes only hex is asked again, in hex, and gives the same signature', async () => {
+  const tron = fakeTronLink({ authorized: true, style: 'hex-only' });
+  const signer = createTronLinkSigner(tron, DEV_ADDRESS);
+  const text = `clutch-tx:1000:${TX_HASH}`;
+  const signature = await signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 });
+
+  assert.deepEqual(signature, TRONWEB_TX_SIGNATURE);
+  assert.deepEqual(tron.signed, [text, utf8hex(text)], 'plain first, then the 0x hex of the same text');
+});
+
+test('a TronLink that says no is passed through, and is not asked again', async () => {
+  const tron = fakeTronLink({ authorized: true, rejectSign: true });
+  const signer = createTronLinkSigner(tron, DEV_ADDRESS);
+  await assert.rejects(signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), /user rejected request/);
+  assert.equal(tron.signed.length, 1, 'a second try would open a second prompt');
+});
+
+test('a TronLink that signs with another account is refused before anything is sent', async () => {
+  const signer = createTronLinkSigner(fakeTronLink({ authorized: true, key: OTHER_KEY }), DEV_BASE58);
+  await assert.rejects(signer.signTransaction({ hashHex: 'ab'.repeat(32), chainId: 2077 }), (error) => {
+    assert.match(error.message, new RegExp(DEV_ADDRESS));
+    assert.match(error.message, /switch/);
+    return true;
+  });
+});
+
+test('a TronLink that signs the hex as text is named, and is not blamed on the account', async () => {
+  const signer = createTronLinkSigner(fakeTronLink({ authorized: true, style: 'hex-as-text' }), DEV_ADDRESS);
+  await assert.rejects(signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), (error) => {
+    assert.match(error.message, /signed the hex text/);
+    assert.doesNotMatch(error.message, /switch/);
+    return true;
+  });
+});
+
+test('a TronLink the site is not allowed in says to connect again', async () => {
+  const signer = createTronLinkSigner(fakeTronLink({ authorized: false }), DEV_ADDRESS);
+  await assert.rejects(signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), /connect again/);
+});
+
+test('a TronLink answer that is not 65 bytes of hex is refused', async () => {
+  for (const answer of ['0x1234', undefined, 42, '0x' + 'zz'.repeat(65)]) {
+    const provider = { request: async () => null, tronWeb: { trx: { signMessageV2: async () => answer } } };
+    const signer = createTronLinkSigner(provider, DEV_ADDRESS);
+    await assert.rejects(signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), /cannot read/);
+  }
+});
+
+test('createTronLinkSigner refuses an address that is not a TRON address', () => {
+  assert.throws(() => createTronLinkSigner(fakeTronLink(), 'TWGmce4sb65jzLEr2qiwA42ntizH66cmXq'), /not a TRON address/);
+});
+
+test('connectWallet with TronLink returns a signer for the account, in the Clutch form', async () => {
+  const tron = fakeTronLink();
+  const signer = await connectWallet(tronWallet(tron));
+  assert.equal(signer.address, DEV_ADDRESS);
+  assert.deepEqual(tron.requests, ['eth_requestAccounts']);
+  // The connection opened the site to TronLink's tronWeb, so the signer can sign now.
+  assert.deepEqual(await signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), TRONWEB_TX_SIGNATURE);
+});
+
+test('connectWallet with an older TronLink falls back to tron_requestAccounts', async () => {
+  const tron = fakeTronLink({ legacy: true });
+  const signer = await connectWallet(tronWallet(tron));
+  assert.equal(signer.address, DEV_ADDRESS);
+  assert.deepEqual(tron.requests, ['eth_requestAccounts', 'tron_requestAccounts']);
+});
+
+test('connectWallet with TronLink passes the refusal on, with the code a person can read', async () => {
+  await assert.rejects(connectWallet(tronWallet(fakeTronLink({ rejectConnect: true }))), { code: 4001 });
+  await assert.rejects(connectWallet(tronWallet(fakeTronLink({ legacy: true, rejectConnect: true }))), { code: 4001 });
+});
+
+test('connectWallet with an older TronLink that is locked says so', async () => {
+  const provider = {
+    request: async ({ method }) => {
+      if (method === 'eth_requestAccounts') throw Object.assign(new Error('Method not supported'), { code: 4200 });
+      return ''; // TronLink answers an empty string when it is locked
+    },
+  };
+  await assert.rejects(connectWallet(tronWallet(provider)), /locked/);
+});
+
+test('connectWallet refuses a TronLink answer with no account', async () => {
+  for (const accounts of [[], null, ['nope'], [42]]) {
+    await assert.rejects(connectWallet(tronWallet({ request: async () => accounts })), /did not share an account/);
+  }
+});
+
+test('createSignerFor picks the signer for the kind of wallet', async () => {
+  const tron = fakeTronLink({ authorized: true });
+  const viaTron = createSignerFor(tronWallet(tron), DEV_BASE58);
+  assert.deepEqual(await viaTron.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), TRONWEB_TX_SIGNATURE);
+
+  const metamask = fakeWallet();
+  for (const wallet of [{ id: 'io.metamask', name: 'MetaMask', kind: 'evm', provider: metamask }, { id: 'x', name: 'X', provider: metamask }]) {
+    const signer = createSignerFor(wallet, DEV_ADDRESS);
+    assert.deepEqual(await signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), {
+      r: '0x03a910ef2c3144e635a9cd5dfb87d0f0a8e9cde11013b5fdbbd3098eb66ede07',
+      s: '0x7270323fea8d69ffeedac84df538c026d630e027b4380686287350fcb8e03c91',
+      v: 28,
+    });
+  }
+});
+
+test('sharedWalletAccount never opens a prompt', async () => {
+  // TronLink: the site was allowed before, so tronWeb is ready; if not, tronWeb is false.
+  const allowed = fakeTronLink({ authorized: true });
+  assert.equal(await sharedWalletAccount(tronWallet(allowed)), DEV_ADDRESS);
+  assert.equal(await sharedWalletAccount(tronWallet(fakeTronLink({ authorized: false }))), null);
+  assert.deepEqual(allowed.requests, [], 'TronLink was not asked anything');
+
+  // MetaMask and Trust Wallet: eth_accounts, which never prompts.
+  const wallet = fakeWallet();
+  wallet.request = async ({ method }) => {
+    wallet.calls.push({ method });
+    return method === 'eth_accounts' ? ['0xDEB4cfb63db134698e1879ea24904df074726cc0'] : assert.fail(`unexpected ${method}`);
+  };
+  assert.equal(await sharedWalletAccount({ id: 'io.metamask', name: 'MetaMask', provider: wallet }), DEV_ADDRESS);
+  assert.deepEqual(wallet.calls, [{ method: 'eth_accounts' }]);
+  assert.equal(await sharedWalletAccount({ id: 'x', name: 'X', provider: { request: async () => [] } }), null);
+});
+
+test('walletAccountFrom reads the first account of each kind of wallet', () => {
+  assert.equal(walletAccountFrom({ kind: 'tron' }, [KEY1_BASE58]), KEY1_ADDRESS);
+  assert.equal(walletAccountFrom({ kind: 'tron' }, []), null);
+  assert.equal(walletAccountFrom({ kind: 'tron' }, ['nope']), null);
+  assert.equal(walletAccountFrom({ kind: 'tron' }, undefined), null);
+  assert.equal(walletAccountFrom({ kind: 'evm' }, ['0xDEB4cfb63db134698e1879ea24904df074726cc0']), DEV_ADDRESS);
+  assert.equal(walletAccountFrom({}, ['0xDEB4cfb63db134698e1879ea24904df074726cc0']), DEV_ADDRESS);
+  assert.equal(walletAccountFrom({ kind: 'evm' }, [KEY1_BASE58]), null, 'a base58 address is not an Ethereum account');
+});
+
+test('watchWalletAccounts follows accountsChanged, and stops when told', () => {
+  const tron = fakeTronLink();
+  const seen = [];
+  const stop = watchWalletAccounts(tronWallet(tron), (account) => seen.push(account));
+  tron.emit('accountsChanged', [KEY1_BASE58]); // the person switched account
+  tron.emit('accountsChanged', []); // TronLink locked, or the site was disconnected
+  assert.deepEqual(seen, [KEY1_ADDRESS, null]);
+
+  stop();
+  assert.equal(tron.listenerCount('accountsChanged'), 0);
+  tron.emit('accountsChanged', [DEV_BASE58]);
+  assert.equal(seen.length, 2, 'nothing after stop');
+
+  // A provider that cannot be listened to gives a stop function that does nothing.
+  assert.doesNotThrow(watchWalletAccounts({ kind: 'evm', provider: { request: async () => null } }, () => {}));
+});
+
+test('discoverInjectedWallets lists TronLink when it announces itself (TIP-6963), next to the others', async () => {
+  const metamask = provider({ isMetaMask: true });
+  const tron = fakeTronLink();
+  const page = fakePage({
+    announced: [{ info: { uuid: 'u1', name: 'MetaMask', rdns: 'io.metamask' }, provider: metamask }],
+    tipAnnounced: [{ info: { uuid: 'u9', name: 'TronLink', icon: 'data:image/png;base64,CC', rdns: 'org.tronlink.www' }, provider: tron }],
+  });
+  const wallets = await discoverInjectedWallets({ host: page, timeoutMs: 5 });
+  assert.deepEqual(wallets.map((w) => [w.id, w.name, w.kind]), [
+    ['io.metamask', 'MetaMask', 'evm'],
+    ['org.tronlink.www', 'TronLink', 'tron'],
+  ]);
+  assert.equal(wallets[1].provider, tron);
+  assert.equal(wallets[1].icon, 'data:image/png;base64,CC');
+});
+
+test('discoverInjectedWallets adds a bare window.tron, or the older window.tronLink, as TronLink', async () => {
+  const tron = fakeTronLink();
+  for (const globals of [{ tron }, { tronLink: tron }, { tron, tronLink: fakeTronLink() }]) {
+    const wallets = await discoverInjectedWallets({ host: fakePage(globals), timeoutMs: 5 });
+    assert.deepEqual(wallets.map((w) => [w.id, w.name, w.kind]), [['injected-tron', 'TronLink', 'tron']]);
+    assert.equal(wallets[0].provider, tron, 'window.tron wins over the older window.tronLink');
+  }
+});
+
+test('discoverInjectedWallets lists TronLink once when it announces and sets window.tron', async () => {
+  const tron = fakeTronLink();
+  const page = fakePage({
+    tipAnnounced: [{ info: { name: 'TronLink', rdns: 'org.tronlink.www' }, provider: tron }],
+    tron,
+  });
+  const wallets = await discoverInjectedWallets({ host: page, timeoutMs: 5 });
+  assert.deepEqual(wallets.map((w) => w.id), ['org.tronlink.www']);
+});
+
+test('discoverInjectedWallets lists a provider announced by both standards once, as a TRON wallet', async () => {
+  const tron = fakeTronLink();
+  const info = { name: 'TronLink', rdns: 'org.tronlink.www' };
+  const page = fakePage({ announced: [{ info, provider: tron }], tipAnnounced: [{ info, provider: tron }] });
+  const wallets = await discoverInjectedWallets({ host: page, timeoutMs: 5 });
+  assert.deepEqual(wallets.map((w) => [w.id, w.kind]), [['org.tronlink.www', 'tron']]);
+});
+
+test('discoverInjectedWallets does not take window.ethereum for TronLink, or the reverse', async () => {
+  const tron = fakeTronLink();
+  const wallets = await discoverInjectedWallets({
+    host: fakePage({ ethereum: provider({ isMetaMask: true }), tron }),
+    timeoutMs: 5,
+  });
+  assert.deepEqual(wallets.map((w) => [w.name, w.kind]), [['MetaMask', 'evm'], ['TronLink', 'tron']]);
+});
+
+test('signTransaction with TronLink: the signature is the one a node checks', async () => {
+  const sdk = new ClutchHubSdk('http://hub.test', DEV_ADDRESS, undefined, 2077);
+  const signer = createTronLinkSigner(fakeTronLink({ authorized: true }), DEV_BASE58);
+  const signed = await sdk.signTransaction(UNSIGNED, signer, EXPECTED);
+
+  const { hash, recomputed, sig } = decodeSigned(signed);
+  assert.equal(hash, recomputed, 'the hash on the wire is the hash of the unsigned transaction');
+  // What `Transaction::verify_signature` does for TronLink: TIP-191 over clutch-tx:{chain}:{hash}.
+  const text = `clutch-tx:2077:${hash}`;
+  const signature = { r: '0x' + sig.r, s: '0x' + sig.s, v: sig.v };
+  assert.equal(recover(tipDigest(Buffer.from(text)), signature), DEV_ADDRESS);
+  assert.notEqual(recover(eip191Digest(text), signature), DEV_ADDRESS, 'and it is not the Ethereum scheme');
+});
+
+test('a TronLink signer logs in: the Hub API gets the signature of the readable challenge', async () => {
+  const key = hex(secp.utils.randomPrivateKey());
+  const address = addressFromPrivateKey(key);
+  const tron = fakeTronLink({ key, authorized: true });
+  const sdk = new ClutchHubSdk('http://hub.test', address, createTronLinkSigner(tron, address), 2077);
+  const sent = [];
+  sdk.apiClient.post = async (_url, body) => {
+    sent.push(body);
+    return tokenReply();
+  };
+  await sdk.ensureAuth();
+
+  const { timestamp, signature } = sent[0].variables;
+  const message = `clutch-auth:2077:${address}:${timestamp}`;
+  assert.deepEqual(tron.signed, [message], 'TronLink is shown the readable challenge');
+  assert.equal(recover(tipDigest(Buffer.from(message)), signature), address);
+});
+
+test('the shared socket never asks TronLink to sign in the background', async () => {
+  const key = hex(secp.utils.randomPrivateKey());
+  const address = addressFromPrivateKey(key);
+  const tron = fakeTronLink({ key, authorized: true });
+  const sdk = new ClutchHubSdk('http://hub.test', address, createTronLinkSigner(tron, address), 2077);
+  assert.deepEqual(await sdk.wsConnectionParams(), {});
+  assert.equal(tron.signed.length, 0);
 });
