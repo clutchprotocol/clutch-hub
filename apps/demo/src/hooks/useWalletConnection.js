@@ -14,7 +14,7 @@ import {
 } from '../utils/walletSession';
 
 /** What the rest of the app reads as "who is signed in": an address and the signer behind it. */
-export const NO_PROFILE = Object.freeze({ publicKey: '', signer: null });
+const NO_PROFILE = Object.freeze({ publicKey: '', signer: null });
 
 function profileFor(wallet, account) {
   const signer = createSignerFor(wallet, account);

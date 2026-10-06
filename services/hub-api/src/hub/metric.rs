@@ -48,6 +48,6 @@ async fn track_and_respond() -> &'static str {
 async fn metrics_handler() -> String {
     let mut buffer = String::new();
     let registry = REGISTRY.lock().unwrap();
-    prometheus_encode(&mut buffer, &*registry).unwrap();
+    prometheus_encode(&mut buffer, &registry).unwrap();
     buffer
 }

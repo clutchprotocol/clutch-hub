@@ -1,4 +1,4 @@
-import { formatExactUsdt, parseUsdToClt } from './money';
+import { formatExactUsdt } from './money';
 
 // Redemption record handling, lifted out of WithdrawPanel: the localStorage round-trip that
 // survives a reload mid-burn, and the three functions that turn a treasury record into

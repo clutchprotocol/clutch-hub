@@ -182,45 +182,9 @@
   background: var(--asphalt);
 }
 
-.step-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--asphalt);
-  border-radius: var(--radius);
-}
-
 .glass-panel {
   background: var(--paper);
   border: 2px solid var(--asphalt);
-}
-
-.map-hint {
-  font-size: 0.95rem;
-  color: var(--muted);
-  text-align: center;
-  margin: 0.5rem 0;
-}
-
-.location-chip {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.location-chip.pickup {
-  background: var(--sign);
-  color: #fff;
-}
-
-.location-chip.dropoff {
-  background: var(--caution);
-  color: #fff;
 }
 
 /* Ride request form: the fare is the one number the passenger types, so it gets the big type. */

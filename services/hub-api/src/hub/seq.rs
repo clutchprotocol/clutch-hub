@@ -42,7 +42,7 @@ impl SeqLogger {
         }
 
         let seq_address = format!("{}/ingest/clef", self.seq_url);
-        let payload = format!("{}\n", event.to_string());
+        let payload = format!("{}\n", event);
         let mut request = self
             .client
             .post(&seq_address)

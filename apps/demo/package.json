@@ -7,20 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/",
+    "test": "node --test src/*.test.js src/*/*.test.js",
     "preview": "vite preview",
     "update:sdk": "npm run build --workspace=clutch-hub-sdk-js",
     "check:sdk": "npm list clutch-hub-sdk-js"
   },
   "dependencies": {
-    "@noble/hashes": "^1.8.0",
-    "@noble/secp256k1": "^2.2.3",
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/manrope": "^5.2.8",
-    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "clutch-hub-sdk-js": "*",
     "leaflet": "^1.9.4",
-    "material-symbols": "^0.43.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0"

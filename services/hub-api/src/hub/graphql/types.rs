@@ -33,12 +33,6 @@ fn u64_as_string<'de, D: Deserializer<'de>>(deserializer: D) -> std::result::Res
     }
 }
 
-#[derive(SimpleObject, Serialize, Deserialize)]
-pub struct RideRequest {
-    pub pickup_location: String,
-    pub dropoff_location: String,
-}
-
 /// Geographic coordinates (latitude, longitude).
 #[derive(SimpleObject, Serialize, Deserialize, Clone)]
 pub struct Coordinates {

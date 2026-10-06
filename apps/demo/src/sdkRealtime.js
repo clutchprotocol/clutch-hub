@@ -33,80 +33,39 @@ function pollLoop(asyncFn, intervalMs, handlers) {
   };
 }
 
-/** @param {any} sdk */
+/**
+ * The SDK's `subscribeName` when it has one, else `listName` polled every `intervalMs`.
+ * @param {any} sdk
+ */
+function subscribeOrPoll(sdk, subscribeName, listName, arg, intervalMs, handlers) {
+  if (typeof sdk[subscribeName] === 'function') {
+    return sdk[subscribeName](arg, handlers);
+  }
+  return pollLoop(
+    async () => {
+      handlers.onData(await sdk[listName](arg));
+    },
+    intervalMs,
+    handlers
+  );
+}
+
 export function subscribeRideRequestsCompat(sdk, bounds, handlers) {
-  if (typeof sdk.subscribeRideRequests === 'function') {
-    return sdk.subscribeRideRequests(bounds, handlers);
-  }
-  return pollLoop(
-    async () => {
-      const list = await sdk.listRideRequests(bounds ?? undefined);
-      handlers.onData(list);
-    },
-    RIDE_REQUESTS_POLL_MS,
-    handlers
-  );
+  return subscribeOrPoll(sdk, 'subscribeRideRequests', 'listRideRequests', bounds ?? undefined, RIDE_REQUESTS_POLL_MS, handlers);
 }
 
-/** @param {any} sdk */
 export function subscribeRideOffersCompat(sdk, rideRequestTxHash, handlers) {
-  if (typeof sdk.subscribeRideOffers === 'function') {
-    return sdk.subscribeRideOffers(rideRequestTxHash, handlers);
-  }
-  return pollLoop(
-    async () => {
-      const list = await sdk.listRideOffers(rideRequestTxHash);
-      handlers.onData(list);
-    },
-    RIDE_OFFERS_POLL_MS,
-    handlers
-  );
+  return subscribeOrPoll(sdk, 'subscribeRideOffers', 'listRideOffers', rideRequestTxHash, RIDE_OFFERS_POLL_MS, handlers);
 }
 
-/** @param {any} sdk */
 export function subscribeActiveTripsCompat(sdk, options, handlers) {
-  if (typeof sdk.subscribeActiveTrips === 'function') {
-    return sdk.subscribeActiveTrips(options, handlers);
-  }
-  return pollLoop(
-    async () => {
-      const list = await sdk.listActiveTrips(options);
-      handlers.onData(list);
-    },
-    ACTIVE_TRIPS_POLL_MS,
-    handlers
-  );
-}
-
-/** @param {any} sdk */
-export function subscribeCompletedTripsCompat(sdk, options, handlers) {
-  if (typeof sdk.subscribeCompletedTrips === 'function') {
-    return sdk.subscribeCompletedTrips(options, handlers);
-  }
-  return pollLoop(
-    async () => {
-      const list = await sdk.listCompletedTrips(options);
-      handlers.onData(list);
-    },
-    ACTIVE_TRIPS_POLL_MS,
-    handlers
-  );
+  return subscribeOrPoll(sdk, 'subscribeActiveTrips', 'listActiveTrips', options, ACTIVE_TRIPS_POLL_MS, handlers);
 }
 
 /** Recent rides: completed + cancelled (falls back to completed-only if SDK lacks `listRecentTrips`). */
 export function subscribeRecentTripsCompat(sdk, options, handlers) {
-  if (typeof sdk.subscribeRecentTrips === 'function') {
-    return sdk.subscribeRecentTrips(options, handlers);
+  if (typeof sdk.subscribeRecentTrips === 'function' || typeof sdk.listRecentTrips === 'function') {
+    return subscribeOrPoll(sdk, 'subscribeRecentTrips', 'listRecentTrips', options, ACTIVE_TRIPS_POLL_MS, handlers);
   }
-  if (typeof sdk.listRecentTrips === 'function') {
-    return pollLoop(
-      async () => {
-        const list = await sdk.listRecentTrips(options);
-        handlers.onData(list);
-      },
-      ACTIVE_TRIPS_POLL_MS,
-      handlers
-    );
-  }
-  return subscribeCompletedTripsCompat(sdk, options, handlers);
+  return subscribeOrPoll(sdk, 'subscribeCompletedTrips', 'listCompletedTrips', options, ACTIVE_TRIPS_POLL_MS, handlers);
 }

@@ -22,8 +22,7 @@ type RecentTripStream = Pin<Box<dyn Stream<Item = Result<Vec<AvailableRecentTrip
 type AccountBalanceStream = Pin<Box<dyn Stream<Item = Result<String>> + Send>>;
 
 fn require_node_client(ctx: &Context<'_>) -> Result<Arc<ClutchNodeClient>> {
-    ctx.data::<Arc<ClutchNodeClient>>()
-        .map(|c| c.clone())
+    ctx.data::<Arc<ClutchNodeClient>>().cloned()
         .map_err(|_| Error::new("Node client not found"))
 }
 

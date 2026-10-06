@@ -4,7 +4,7 @@ import DriverView from './components/DriverView';
 import NetworkView from './components/NetworkView';
 import TransactionHistoryPage from './components/TransactionHistoryPage';
 import ExplorerTabs from './components/ExplorerTabs';
-import RoleEntry, { persistRole } from './components/RoleEntry';
+import RoleEntry from './components/RoleEntry';
 import BalanceDisplay from './components/BalanceDisplay';
 import DepositPanel from './components/DepositPanel';
 import WithdrawPanel from './components/WithdrawPanel';
@@ -18,6 +18,16 @@ import { EXPLORER_URL } from './config';
 import './App.css';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
+
+function persistRole(roleId) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ROLE_STORAGE_KEY, roleId);
+    }
+  } catch {
+    // ignore storage failures; role will just not persist
+  }
+}
 
 function App() {
   const initialStoredRole = useMemo(() => {
