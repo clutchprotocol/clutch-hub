@@ -1,5 +1,6 @@
 export * from './types.js';
 export * from './sdk.js';
+export * from './signers.js';
 export {
   hubGraphqlWsUrl,
   RIDE_REQUEST_GQL_FIELDS,

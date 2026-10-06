@@ -41,9 +41,26 @@ await sdk.submitTransaction(signed.rawTransaction);
 
 Hash arguments (`listRideOffers`, `subscribeRideOffers`) accept the `0x`-prefixed form that `signTransaction` returns; the SDK normalizes them to the form the hub matches on.
 
+## Wallets: MetaMask, Trust Wallet
+
+A wallet keeps the key and signs a short text with `personal_sign`. Use a signer where you used a key:
+
+```javascript
+import { ClutchHubSdk, discoverInjectedWallets, connectWallet } from 'clutch-hub-sdk-js';
+
+const [wallet] = await discoverInjectedWallets();   // EIP-6963, then window.ethereum
+const signer = await connectWallet(wallet);          // the wallet asks the user to share an account
+
+const sdk = new ClutchHubSdk('http://localhost:3000', signer.address, signer, 2077);
+// ... create the unsigned transaction as above ...
+const signed = await sdk.signTransaction(unsigned, signer, { type: 'RideRequest', fare: 5_000_000n });
+```
+
+Each `signTransaction` and each login opens a prompt in the wallet. The text the wallet shows is `clutch-tx:{chainId}:{hash}` for a transaction and `clutch-auth:{chainId}:{address}:{timestamp}` for the login. The node and the Hub API accept this signature next to the signature of a private key. `createWalletSigner(provider, address)` builds a signer for a provider you already have, and `createLocalSigner(privateKey)` wraps a key. A user who says no in the wallet gives a rejection with `code: 4001`.
+
 ## Features
 
-- Client-side signing (private keys never sent to server)
+- Client-side signing (private keys never sent to server), or a wallet that keeps the key (MetaMask, Trust Wallet)
 - Full ride lifecycle: request, offer, accept, pay, cancel
 - GraphQL queries and WebSocket subscriptions
 - TypeScript types
@@ -52,7 +69,8 @@ Hash arguments (`listRideOffers`, `subscribeRideOffers`) accept the `0x`-prefixe
 
 | Category | Methods |
 |----------|---------|
-| Auth | Auto `generateToken` via `ensureAuth()` (signed challenge; needs the private key), `setPrivateKey`, `signAuthChallenge` |
+| Auth | Auto `generateToken` via `ensureAuth()` (signed challenge; needs a private key or a signer), `setPrivateKey`, `setSigner`, `signAuthChallenge` |
+| Signers | `createLocalSigner`, `createWalletSigner`, `discoverInjectedWallets`, `connectWallet`, `addressFromPrivateKey` |
 | Write | `createUnsignedRide*`, `signTransaction`, `submitTransaction` |
 | Read | `listRideRequests`, `listRideOffers`, `listActiveTrips`, `getAccountBalance`, … |
 | Live | `subscribeRideRequests`, `subscribeRideOffers`, `subscribeActiveTrips`, … |
