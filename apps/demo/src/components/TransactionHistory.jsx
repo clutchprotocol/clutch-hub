@@ -74,16 +74,6 @@ const TransactionHistory = ({ userPublicKey, refreshTrigger, contentOnly = false
     };
   }, [userPublicKey, loadTransactions]);
 
-  const addTransaction = useCallback((transaction) => {
-    setTransactions((prev) => {
-      const updated = [transaction, ...prev];
-      if (userPublicKey) {
-        localStorage.setItem(`clutch_tx_${userPublicKey}`, JSON.stringify(updated.slice(0, 10)));
-      }
-      return updated;
-    });
-  }, [userPublicKey]);
-
   if (!userPublicKey) return null;
 
   if (transactions.length === 0) {
@@ -153,7 +143,7 @@ TransactionHistory.addTransaction = (userPublicKey, transaction) => {
   let transactions = [];
   const stored = localStorage.getItem(`clutch_tx_${userPublicKey}`);
   if (stored) {
-    try { transactions = JSON.parse(stored); } catch {}
+    try { transactions = JSON.parse(stored); } catch { /* corrupt entry: start a new list */ }
   }
   const updated = [transaction, ...transactions];
   localStorage.setItem(`clutch_tx_${userPublicKey}`, JSON.stringify(updated.slice(0, 10)));

@@ -276,10 +276,3 @@
   line-height: 1;
   color: var(--ink);
 }
-
-.wallet-balance-unit {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--muted);
-  margin-left: 0.2rem;
-}

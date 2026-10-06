@@ -2,18 +2,6 @@ import React from 'react';
 import WalletConnect from './WalletConnect';
 import EnvTag from './EnvTag';
 
-const ROLE_STORAGE_KEY = 'clutch_demo_role';
-
-export function persistRole(roleId) {
-  try {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(ROLE_STORAGE_KEY, roleId);
-    }
-  } catch {
-    // ignore storage failures; role will just not persist
-  }
-}
-
 const RoleEntry = ({ selectedRole, onSelectRole, connection }) => {
   const title = selectedRole ? 'Connect your wallet' : 'Select your account';
   const subtitle = selectedRole
