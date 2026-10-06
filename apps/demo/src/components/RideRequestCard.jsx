@@ -5,7 +5,9 @@ import { truncAddr } from '../utils/address';
 import { formatUsd } from '../utils/money';
 import { subscribeRideOffersCompat } from '../sdkRealtime';
 import TransactionHistory from './TransactionHistory';
+import WalletNote from './WalletNote';
 import { Receipt, Rule } from './receipt';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 
 // One open ride request, with the offers drivers have made against it. Owns its own offer
 // state and subscription: the passenger can have several requests open at once, and each
@@ -17,7 +19,6 @@ const RideRequestCard = ({
   hubSdk,
   onAcceptSuccess,
   onCancelSuccess,
-  requestPrivateKey,
 }) => {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,8 @@ const RideRequestCard = ({
   const [acceptError, setAcceptError] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  // What the wallet's prompt is for, while one is open.
+  const [walletNote, setWalletNote] = useState('');
 
   const fetchOffers = useCallback(async () => {
     if (!userProfile.publicKey || !req.txHash) return;
@@ -67,23 +70,19 @@ const RideRequestCard = ({
     setAcceptingOfferTxHash(offer.txHash);
     setAcceptError(null);
     try {
-      // Private key needed before createUnsigned*: generateToken requires a signed challenge.
-      let privateKey = userProfile.privateKey;
-      if (!privateKey) {
-        privateKey = await requestPrivateKey('Enter your private key to sign the acceptance:');
-        if (!privateKey) {
-          setAcceptError('Signing cancelled.');
-          setAcceptingOfferTxHash(null);
-          return;
-        }
-      }
-      const sdk = hubSdk ?? new ClutchHubSdk(API_URL, userProfile.publicKey, privateKey, CHAIN_ID);
-      sdk.setPrivateKey(privateKey);
+      const { signer } = userProfile;
+      const sdk = hubSdk ?? new ClutchHubSdk(API_URL, userProfile.publicKey, signer, CHAIN_ID);
+      // The wallet asks to sign in first when it has not yet (generateToken needs a signed
+      // challenge), then asks for the acceptance itself.
+      const what = `accept this offer and hold ${formatUsd(offer.fare)} for the ride`;
+      setWalletNote(approveInWalletMessage(what, sdk.hasValidToken()));
       const unsignedTx = await sdk.createUnsignedRideAcceptance({ rideOfferTxHash: offer.txHash });
-      const signature = await sdk.signTransaction(unsignedTx, privateKey, {
+      setWalletNote(approveInWalletMessage(what));
+      const signature = await sdk.signTransaction(unsignedTx, signer, {
         type: 'RideAcceptance',
         refTxHash: offer.txHash,
       });
+      setWalletNote('');
       await sdk.submitTransaction(signature.rawTransaction);
       TransactionHistory.addTransaction(userProfile.publicKey, {
         type: 'Ride Acceptance',
@@ -95,7 +94,7 @@ const RideRequestCard = ({
       onAcceptSuccess?.();
     } catch (err) {
       console.error('Accept offer failed:', err);
-      setAcceptError(err.message || 'Failed to accept offer');
+      setAcceptError(describeWalletError(err, 'Failed to accept offer'));
       TransactionHistory.addTransaction(userProfile.publicKey, {
         type: 'Ride Acceptance',
         timestamp: Date.now(),
@@ -105,31 +104,26 @@ const RideRequestCard = ({
       });
     } finally {
       setAcceptingOfferTxHash(null);
+      setWalletNote('');
     }
-  }, [userProfile, onAcceptSuccess, requestPrivateKey, hubSdk]);
+  }, [userProfile, onAcceptSuccess, hubSdk]);
 
   const handleCancelRequest = useCallback(async () => {
     if (!userProfile.publicKey || !req.txHash) return;
     setCancelling(true);
     setCancelError(null);
     try {
-      // Private key needed before createUnsigned*: generateToken requires a signed challenge.
-      let privateKey = userProfile.privateKey;
-      if (!privateKey) {
-        privateKey = await requestPrivateKey('Enter your private key to sign the cancellation:');
-        if (!privateKey) {
-          setCancelError('Signing cancelled.');
-          setCancelling(false);
-          return;
-        }
-      }
-      const sdk = hubSdk ?? new ClutchHubSdk(API_URL, userProfile.publicKey, privateKey, CHAIN_ID);
-      sdk.setPrivateKey(privateKey);
+      const { signer } = userProfile;
+      const sdk = hubSdk ?? new ClutchHubSdk(API_URL, userProfile.publicKey, signer, CHAIN_ID);
+      const what = 'cancel this ride request';
+      setWalletNote(approveInWalletMessage(what, sdk.hasValidToken()));
       const unsignedTx = await sdk.createUnsignedRideRequestCancel({ rideRequestTxHash: req.txHash });
-      const signature = await sdk.signTransaction(unsignedTx, privateKey, {
+      setWalletNote(approveInWalletMessage(what));
+      const signature = await sdk.signTransaction(unsignedTx, signer, {
         type: 'RideRequestCancel',
         refTxHash: req.txHash,
       });
+      setWalletNote('');
       await sdk.submitTransaction(signature.rawTransaction);
       TransactionHistory.addTransaction(userProfile.publicKey, {
         type: 'Ride Request Cancel',
@@ -141,7 +135,7 @@ const RideRequestCard = ({
       onCancelSuccess?.();
     } catch (err) {
       console.error('Cancel request failed:', err);
-      setCancelError(err.message || 'Failed to cancel request');
+      setCancelError(describeWalletError(err, 'Failed to cancel request'));
       TransactionHistory.addTransaction(userProfile.publicKey, {
         type: 'Ride Request Cancel',
         timestamp: Date.now(),
@@ -151,8 +145,9 @@ const RideRequestCard = ({
       });
     } finally {
       setCancelling(false);
+      setWalletNote('');
     }
-  }, [userProfile, req.txHash, onCancelSuccess, requestPrivateKey, hubSdk]);
+  }, [userProfile, req.txHash, onCancelSuccess, hubSdk]);
 
   return (
     <Receipt
@@ -178,6 +173,7 @@ const RideRequestCard = ({
         </span>
       </div>
 
+      <WalletNote message={walletNote} />
       {error && <div className="status-banner error">{error}</div>}
       {cancelError && <div className="status-banner error">{cancelError}</div>}
       {acceptError && <div className="status-banner error">{acceptError}</div>}

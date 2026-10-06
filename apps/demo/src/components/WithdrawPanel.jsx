@@ -3,10 +3,11 @@ import { ClutchHubSdk } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, ORCHESTRATOR_BASE_URL } from '../config';
 import TransactionHistory from './TransactionHistory';
 import { CopyableValue } from './DepositPanel';
-import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
+import WalletNote from './WalletNote';
 import { useConfirmDialog } from './layout/useConfirmDialog.jsx';
 import { parseUsdToClt } from '../utils/money';
 import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 import {
   REDEMPTION_STATUS_LABELS,
   loadRedemption,
@@ -28,8 +29,9 @@ import {
  * So the order is fixed and not negotiable:
  *   1. `POST /api/v1/redemptions` → `{id, redemption_ref, amount_clt, status}`
  *   2. `sdk.createUnsignedBurn({ amount, redemptionRef })` with the ref from step 1
- *   3. `sdk.signTransaction` (local, as everywhere else in this app) with an `expected` blob, so
- *      the hub's answer is verified against what we asked for instead of signed blind
+ *   3. `sdk.signTransaction` (the wallet signs, after the person approves it in the wallet) with
+ *      an `expected` blob, so the hub's answer is verified against what we asked for instead of
+ *      signed blind
  *   4. `sdk.submitTransaction`
  *   5. poll `GET /api/v1/redemptions/:id`
  *
@@ -46,26 +48,22 @@ const WithdrawPanel = ({ userProfile, open }) => {
   const [error, setError] = useState(null);
   const [unavailable, setUnavailable] = useState(false);
 
-  const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
+  // What the wallet's prompt is for, while one is open.
+  const [walletNote, setWalletNote] = useState('');
+
   const { ConfirmModal, requestConfirm } = useConfirmDialog();
 
   const publicKey = userProfile?.publicKey || '';
-  const privateKey = userProfile?.privateKey || '';
+  const signer = userProfile?.signer || null;
   const redemptionId = redemption?.id || null;
 
-  /** An SDK plus the key it was built with — `signTransaction` needs the raw key too, and asking
-   * for it twice would mean two modals for one burn. Built the same way `DepositPanel` builds
-   * its own (constructor takes the key, so no `setPrivateKey` call is needed before
-   * `createUnsigned*`). Returns null when the user dismisses the key modal. */
+  /** An SDK plus the signer it was built with — `signTransaction` needs the signer too. Built the
+   * same way `DepositPanel` builds its own (the constructor takes the signer, so no `setSigner`
+   * call is needed before `createUnsigned*`). Returns null when no wallet is connected. */
   const openSession = useCallback(async () => {
-    if (!publicKey) return null;
-    let pk = privateKey;
-    if (!pk) {
-      pk = await requestPrivateKey('Enter your private key to continue this withdrawal:');
-      if (!pk) return null;
-    }
-    return { sdk: new ClutchHubSdk(API_URL, publicKey, pk, CHAIN_ID), privateKey: pk };
-  }, [publicKey, privateKey, requestPrivateKey]);
+    if (!publicKey || !signer) return null;
+    return { sdk: new ClutchHubSdk(API_URL, publicKey, signer, CHAIN_ID), signer };
+  }, [publicKey, signer]);
 
   // Re-read the in-progress redemption from storage whenever the wallet changes or the panel is
   // toggled. Reopening is the moment to pick up a redemption left behind by a closed tab, and it
@@ -142,8 +140,14 @@ const WithdrawPanel = ({ userProfile, open }) => {
     (async () => {
       const session = await openSession();
       if (cancelled || !session) return;
+      // Opening the panel may ask the wallet to sign in. A timer never does: once the sign-in has
+      // expired the polls stop until the panel is opened again.
       await fetchStatus(session.sdk);
-      if (!cancelled) intervalId = setInterval(() => fetchStatus(session.sdk), 10000);
+      if (!cancelled) {
+        intervalId = setInterval(() => {
+          if (session.sdk.hasValidToken()) fetchStatus(session.sdk);
+        }, 10000);
+      }
     })();
 
     return () => {
@@ -185,10 +189,13 @@ const WithdrawPanel = ({ userProfile, open }) => {
       try {
         const session = await openSession();
         if (!session) {
-          setError('Cancelled — no withdrawal was started.');
+          setError('Connect your wallet first — no withdrawal was started.');
           return;
         }
+        // Starting a withdrawal needs the hub's sign-in. The wallet asks when it has not yet.
+        if (!session.sdk.hasValidToken()) setWalletNote(approveInWalletMessage('sign in to Clutch'));
         const authHeaders = await session.sdk.getAuthHeaders();
+        setWalletNote('');
         const res = await fetch(`${ORCHESTRATOR_BASE_URL}/api/v1/redemptions`, {
           method: 'POST',
           headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -229,9 +236,10 @@ const WithdrawPanel = ({ userProfile, open }) => {
         setAmount('');
       } catch (err) {
         console.error('redemption create failed', err);
-        setError(err.message || 'Could not start the withdrawal.');
+        setError(describeWalletError(err, 'Could not start the withdrawal.'));
       } finally {
         setBusy(false);
+        setWalletNote('');
       }
     },
     [amount, openSession, payoutAddress, publicKey]
@@ -300,9 +308,13 @@ const WithdrawPanel = ({ userProfile, open }) => {
     try {
       const session = await openSession();
       if (!session) {
-        setError('Cancelled — nothing was burned.');
+        setError('Connect your wallet first — nothing was burned.');
         return;
       }
+      // The wallet asks to sign in first when it has not yet, then for the burn itself. It shows
+      // the text it signs, not the amount, so say what the text is.
+      const what = `burn ${amountLabel} CLT to withdraw`;
+      setWalletNote(approveInWalletMessage(what, session.sdk.hasValidToken()));
       const unsignedTx = await session.sdk.createUnsignedBurn({
         amount: BigInt(current.amountClt),
         redemptionRef: current.redemptionRef,
@@ -314,11 +326,13 @@ const WithdrawPanel = ({ userProfile, open }) => {
       // otherwise get signed unread, and a ref-less burn is CLT destroyed with nothing on the
       // treasury side pointing at it. It throws before signing, while `broadcastAttempted` is
       // still false, so the "Nothing was burned" branch below is the one that runs.
-      const signature = await session.sdk.signTransaction(unsignedTx, session.privateKey, {
+      setWalletNote(approveInWalletMessage(what));
+      const signature = await session.sdk.signTransaction(unsignedTx, session.signer, {
         type: 'Burn',
         amount: BigInt(current.amountClt),
         redemptionRef: current.redemptionRef,
       });
+      setWalletNote('');
 
       // Written BEFORE the broadcast, and to storage rather than only to state. A lost response, a
       // crash, or a reload must never bring the burn button back for this reference.
@@ -350,10 +364,11 @@ const WithdrawPanel = ({ userProfile, open }) => {
             'Your CLT may already be burned, so the burn will not be offered again. The withdrawal ' +
             'is tracked below under its reference — nothing is unaccounted for; if the status stays ' +
             'stuck, send support that reference.'
-          : `Could not prepare the burn (${err.message || 'unknown error'}). Nothing was burned — you can try again.`
+          : `Could not prepare the burn (${describeWalletError(err, 'unknown error')}). Nothing was burned — you can try again.`
       );
     } finally {
       setBusy(false);
+      setWalletNote('');
     }
   }, [openSession, publicKey, redemption, requestConfirm]);
 
@@ -396,6 +411,7 @@ const WithdrawPanel = ({ userProfile, open }) => {
         </div>
       )}
 
+      <WalletNote message={walletNote} />
       {error && <div className="status-banner error">{error}</div>}
 
       {!redemption && (
@@ -537,7 +553,6 @@ const WithdrawPanel = ({ userProfile, open }) => {
         </div>
       )}
 
-      <PrivateKeyModal />
       <ConfirmModal />
     </div>
   );

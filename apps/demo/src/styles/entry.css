@@ -107,3 +107,109 @@
   font-weight: 400;
   color: #d6dcd8;
 }
+
+/* ===== Entry: connect a wallet (components/WalletConnect.jsx) ===== */
+.wallet-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+}
+
+.wallet-connect-lead,
+.wallet-connect-status,
+.wallet-connect-note {
+  margin: 0;
+  color: var(--body);
+  line-height: 1.5;
+}
+
+.wallet-connect-lead {
+  font-size: 1.05rem;
+}
+
+.wallet-connect-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.wallet-connect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* One wallet, one wide button: the name is the label and the wallet's own icon is the logo. */
+.wallet-connect-option {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.9rem 1.1rem;
+  border: 2px solid var(--asphalt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.wallet-connect-option:hover:not(:disabled) {
+  background: var(--concrete-2);
+}
+
+.wallet-connect-option:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.wallet-connect-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.wallet-connect-icon--blank {
+  background: var(--concrete-2);
+}
+
+.wallet-connect-name {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.wallet-connect-go {
+  font-weight: 600;
+  color: var(--sign-deep);
+}
+
+.wallet-connect-help {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.wallet-connect-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* The links are anchors that look like the secondary button. */
+.wallet-connect-links a {
+  text-decoration: none;
+}
+
+.wallet-connect-again,
+.role-entry-back {
+  align-self: flex-start;
+}
+
+.role-entry-back {
+  margin-top: 1rem;
+}

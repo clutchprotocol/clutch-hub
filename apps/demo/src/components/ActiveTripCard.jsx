@@ -6,9 +6,10 @@ import { Receipt, Row, Rule, Meter, CopyableAddress } from './receipt';
 import { ClutchHubSdk, verifyUnsignedTransaction } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import TransactionHistory from './TransactionHistory';
-import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
+import WalletNote from './WalletNote';
 import { useConfirmDialog } from './layout/useConfirmDialog.jsx';
 import { formatUsd, parseUsdToClt } from '../utils/money';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 import { pickupIcon, dropoffIcon } from '../utils/mapMarkers';
 
 function normAddr(a) {
@@ -28,8 +29,9 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
   const [referrer, setReferrer] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  // What the wallet's prompt is for, while one is open.
+  const [walletNote, setWalletNote] = useState('');
 
-  const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
   const { ConfirmModal, requestConfirm } = useConfirmDialog();
 
   const showPayUi =
@@ -64,25 +66,21 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
     setPayError(null);
     setReferrer(null);
     try {
-      const { publicKey, privateKey } = passengerPayment.userProfile;
-      // Private key needed before createUnsigned*: generateToken requires a signed challenge.
-      let pk = privateKey;
-      if (!pk) {
-        pk = await requestPrivateKey('Enter your private key to sign the payment:');
-        if (!pk) {
-          setPayError('Signing cancelled.');
-          setPaying(false);
-          return;
-        }
-      }
-      const sdk = new ClutchHubSdk(API_URL, publicKey, pk, CHAIN_ID);
+      const { publicKey, signer } = passengerPayment.userProfile;
+      const sdk = new ClutchHubSdk(API_URL, publicKey, signer, CHAIN_ID);
+      // The wallet asks to sign in first when it has not yet (generateToken needs a signed
+      // challenge), then asks for the payment itself.
+      const what = `pay ${formatUsd(fare)} for this ride`;
+      setWalletNote(approveInWalletMessage(what, sdk.hasValidToken()));
       const unsignedTx = await sdk.createUnsignedRidePay({
         rideAcceptanceTxHash: trip.txHash,
         fare,
       });
       const expected = { type: 'RidePay', fare, refTxHash: trip.txHash };
       setReferrer(verifyUnsignedTransaction(unsignedTx, expected).referrer);
-      const signature = await sdk.signTransaction(unsignedTx, pk, expected);
+      setWalletNote(approveInWalletMessage(what));
+      const signature = await sdk.signTransaction(unsignedTx, signer, expected);
+      setWalletNote('');
       await sdk.submitTransaction(signature.rawTransaction);
       TransactionHistory.addTransaction(publicKey, {
         type: 'Ride Pay',
@@ -95,7 +93,7 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
       passengerPayment.onSuccess?.();
     } catch (err) {
       console.error(err);
-      setPayError(err.message || 'Payment failed');
+      setPayError(describeWalletError(err, 'Payment failed'));
       TransactionHistory.addTransaction(passengerPayment.userProfile.publicKey, {
         type: 'Ride Pay',
         timestamp: Date.now(),
@@ -105,8 +103,9 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
       });
     } finally {
       setPaying(false);
+      setWalletNote('');
     }
-  }, [passengerPayment, payAmount, remaining, trip.txHash, requestPrivateKey]);
+  }, [passengerPayment, payAmount, remaining, trip.txHash]);
 
   /** @param {bigint} numerator @param {bigint} denominator */
   const setQuickPay = (numerator, denominator) => {
@@ -127,23 +126,17 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
     setCancelling(true);
     setCancelError(null);
     try {
-      const { publicKey, privateKey } = cancelAction.userProfile;
-      // Private key needed before createUnsigned*: generateToken requires a signed challenge.
-      let pk = privateKey;
-      if (!pk) {
-        pk = await requestPrivateKey('Enter your private key to sign the cancellation:');
-        if (!pk) {
-          setCancelError('Signing cancelled.');
-          setCancelling(false);
-          return;
-        }
-      }
-      const sdk = new ClutchHubSdk(API_URL, publicKey, pk, CHAIN_ID);
+      const { publicKey, signer } = cancelAction.userProfile;
+      const sdk = new ClutchHubSdk(API_URL, publicKey, signer, CHAIN_ID);
+      const what = 'cancel this ride';
+      setWalletNote(approveInWalletMessage(what, sdk.hasValidToken()));
       const unsignedTx = await sdk.createUnsignedRideCancel({
         rideAcceptanceTxHash: trip.txHash,
       });
       const expected = { type: 'RideCancel', refTxHash: trip.txHash };
-      const signature = await sdk.signTransaction(unsignedTx, pk, expected);
+      setWalletNote(approveInWalletMessage(what));
+      const signature = await sdk.signTransaction(unsignedTx, signer, expected);
+      setWalletNote('');
       await sdk.submitTransaction(signature.rawTransaction);
       TransactionHistory.addTransaction(publicKey, {
         type: 'Ride Cancel',
@@ -154,7 +147,7 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
       cancelAction.onSuccess?.();
     } catch (err) {
       console.error(err);
-      setCancelError(err.message || 'Cancel failed');
+      setCancelError(describeWalletError(err, 'Cancel failed'));
       TransactionHistory.addTransaction(cancelAction.userProfile.publicKey, {
         type: 'Ride Cancel',
         timestamp: Date.now(),
@@ -163,8 +156,9 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
       });
     } finally {
       setCancelling(false);
+      setWalletNote('');
     }
-  }, [cancelAction, remaining, trip.txHash, requestPrivateKey, requestConfirm]);
+  }, [cancelAction, remaining, trip.txHash, requestConfirm]);
 
   const puLat = trip.pickupLocation.latitude;
   const puLng = trip.pickupLocation.longitude;
@@ -240,6 +234,7 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
                 {paying ? 'Paying…' : 'Pay'}
               </button>
             </div>
+            <WalletNote message={paying ? walletNote : ''} />
             {referrer && (
               <p className="r-note">
                 Referrer on this transaction: <CopyableAddress address={referrer} />
@@ -270,6 +265,7 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
             <button type="button" className="btn-danger" disabled={cancelling} onClick={handleCancel}>
               {cancelling ? 'Cancelling…' : 'Cancel ride'}
             </button>
+            <WalletNote message={cancelling ? walletNote : ''} />
             {cancelError && (
               <div className="status-banner error" style={{ marginTop: '0.5rem' }}>{cancelError}</div>
             )}
@@ -277,7 +273,6 @@ const ActiveTripCard = ({ trip, passengerPayment, cancelAction }) => {
         )}
       </Receipt>
       <ConfirmModal />
-      <PrivateKeyModal />
     </>
   );
 };
