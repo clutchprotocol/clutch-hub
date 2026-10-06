@@ -59,13 +59,23 @@ test("an unknown host yields no API url, so the build-time value wins", () => {
   assert.equal(apiUrlForHost("example.com", "https:"), null);
 });
 
-test("only the testnet host links to an explorer", () => {
+test("each network links to its own explorer", () => {
   assert.equal(
     explorerUrlForHost("app-stage.clutchprotocol.io", "https:"),
     "https://explorer-stage.clutchprotocol.io",
   );
-  // The stage explorer indexes the testnet chain. A mainnet transaction must never link there.
-  for (const h of ["app.clutchprotocol.io", "localhost", "example.com", "", undefined]) {
+  assert.equal(
+    explorerUrlForHost("app.clutchprotocol.io", "https:"),
+    "https://explorer.clutchprotocol.io",
+  );
+  // Each explorer indexes one chain: a mainnet transaction must never link to the testnet one.
+  assert.notEqual(explorerUrlForHost("app.clutchprotocol.io", "https:"), "https://explorer-stage.clutchprotocol.io");
+  // The protocol of the page is kept (a local http page links over http).
+  assert.equal(explorerUrlForHost("app.clutchprotocol.io", "http:"), "http://explorer.clutchprotocol.io");
+});
+
+test("a host that is not an app host links to no explorer", () => {
+  for (const h of ["api.clutchprotocol.io", "explorer.clutchprotocol.io", "localhost", "example.com", "", undefined]) {
     assert.equal(explorerUrlForHost(h, "https:"), null, `${h} must not get an explorer link`);
   }
 });

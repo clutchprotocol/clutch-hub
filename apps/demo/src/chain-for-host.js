@@ -57,15 +57,16 @@ export function apiUrlForHost(host, protocol) {
 /**
  * The block explorer for a deployment, or null when that network has none.
  *
- * Only the testnet has one: `app-stage.<domain>` -> `explorer-stage.<domain>`. The mainnet host
- * gets null on purpose. The stage explorer indexes the testnet chain, so a mainnet transaction
- * linked there would only ever show "not found". When a mainnet explorer exists, add
- * `app.` -> `explorer.` here.
+ * Each network has its own: `app-stage.<domain>` -> `explorer-stage.<domain>` (the testnet) and,
+ * since 2026-10-06, `app.<domain>` -> `explorer.<domain>` (mainnet). They must never cross: each
+ * explorer indexes one chain, so a transaction linked to the other one only ever shows "not found".
  */
 export function explorerUrlForHost(host, protocol) {
-  if (typeof host !== "string" || !host.startsWith("app-stage.")) return null;
+  if (typeof host !== "string") return null;
   const scheme = typeof protocol === "string" && protocol.length > 0 ? protocol : "https:";
-  return `${scheme}//${host.replace(/^app-stage\./, "explorer-stage.")}`;
+  if (host.startsWith("app-stage.")) return `${scheme}//${host.replace(/^app-stage\./, "explorer-stage.")}`;
+  if (host.startsWith("app.")) return `${scheme}//${host.replace(/^app\./, "explorer.")}`;
+  return null;
 }
 
 /**
