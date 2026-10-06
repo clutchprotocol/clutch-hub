@@ -57,6 +57,16 @@ export function normalizeTxHashForRlp(hex: string): string {
   return stripHexPrefix(s);
 }
 
+/** Optional driver / passenger filter taken by the trip lists and subscriptions. */
+type TripFilter = { driverAddress?: string; passengerAddress?: string };
+
+function tripFilterVariables(options?: TripFilter): Record<string, string | null> {
+  return {
+    driverAddress: options?.driverAddress ?? null,
+    passengerAddress: options?.passengerAddress ?? null,
+  };
+}
+
 /**
  * The hub stores transaction hashes as 64 lowercase hex characters with no `0x`, and its
  * hash-taking query arguments (`listRideOffers`, `rideOffersUpdated`) match as exact strings.
@@ -671,116 +681,47 @@ export class ClutchHubSdk {
   /**
    * Fetches an unsigned ride request transaction from the GraphQL API.
    */
-  public async createUnsignedRideRequest(
-    args: RideRequestArgs
-  ): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const pickupLat = (args.pickup as any).latitude ?? (args.pickup as any).lat;
-    const pickupLng = (args.pickup as any).longitude ?? (args.pickup as any).lng;
-    const dropoffLat = (args.dropoff as any).latitude ?? (args.dropoff as any).lat;
-    const dropoffLng = (args.dropoff as any).longitude ?? (args.dropoff as any).lng;
-
-    const query = `
-      mutation CreateUnsignedRideRequest(
-        $pickupLatitude: Float!, $pickupLongitude: Float!,
-        $dropoffLatitude: Float!, $dropoffLongitude: Float!, $fare: String!
-      ) {
-        createUnsignedRideRequest(
-          pickupLatitude: $pickupLatitude,
-          pickupLongitude: $pickupLongitude,
-          dropoffLatitude: $dropoffLatitude,
-          dropoffLongitude: $dropoffLongitude,
-          fare: $fare
-        )
-      }
-    `;
-    const variables = {
-      pickupLatitude: pickupLat,
-      pickupLongitude: pickupLng,
-      dropoffLatitude: dropoffLat,
-      dropoffLongitude: dropoffLng,
-      fare: args.fare.toString(),
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRideRequest: UnsignedTransaction
-    }>(query, variables);
-    return result.createUnsignedRideRequest;
+  public async createUnsignedRideRequest(args: RideRequestArgs): Promise<UnsignedTransaction> {
+    const pickup = args.pickup as any;
+    const dropoff = args.dropoff as any;
+    return this.createUnsigned('createUnsignedRideRequest', {
+      pickupLatitude: ['Float!', pickup.latitude ?? pickup.lat],
+      pickupLongitude: ['Float!', pickup.longitude ?? pickup.lng],
+      dropoffLatitude: ['Float!', dropoff.latitude ?? dropoff.lat],
+      dropoffLongitude: ['Float!', dropoff.longitude ?? dropoff.lng],
+      fare: ['String!', args.fare.toString()],
+    });
   }
 
   /**
    * Fetches an unsigned ride offer transaction from the GraphQL API.
    * Driver offers to fulfill a ride request at the specified fare.
    */
-  public async createUnsignedRideOffer(
-    args: RideOfferArgs
-  ): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedRideOffer(
-        $rideRequestTransactionHash: String!, $fare: String!
-      ) {
-        createUnsignedRideOffer(
-          rideRequestTransactionHash: $rideRequestTransactionHash,
-          fare: $fare
-        )
-      }
-    `;
-    const variables = {
-      rideRequestTransactionHash: args.rideRequestTxHash,
-      fare: args.fare.toString(),
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRideOffer: UnsignedTransaction
-    }>(query, variables);
-    return result.createUnsignedRideOffer;
+  public async createUnsignedRideOffer(args: RideOfferArgs): Promise<UnsignedTransaction> {
+    return this.createUnsigned('createUnsignedRideOffer', {
+      rideRequestTransactionHash: ['String!', args.rideRequestTxHash],
+      fare: ['String!', args.fare.toString()],
+    });
   }
 
   /**
    * Fetches an unsigned ride acceptance transaction from the GraphQL API.
    * Passenger confirms a driver's offer for their ride request.
    */
-  public async createUnsignedRideAcceptance(
-    args: RideAcceptanceArgs
-  ): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedRideAcceptance($rideOfferTransactionHash: String!) {
-        createUnsignedRideAcceptance(rideOfferTransactionHash: $rideOfferTransactionHash)
-      }
-    `;
-    const variables = {
-      rideOfferTransactionHash: args.rideOfferTxHash,
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRideAcceptance: UnsignedTransaction
-    }>(query, variables);
-    return result.createUnsignedRideAcceptance;
+  public async createUnsignedRideAcceptance(args: RideAcceptanceArgs): Promise<UnsignedTransaction> {
+    return this.createUnsigned('createUnsignedRideAcceptance', {
+      rideOfferTransactionHash: ['String!', args.rideOfferTxHash],
+    });
   }
 
   /**
    * Fetches an unsigned RidePay transaction. Passenger pays the driver in portions until the offer fare is covered.
    */
   public async createUnsignedRidePay(args: RidePayArgs): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedRidePay(
-        $rideAcceptanceTransactionHash: String!,
-        $fare: String!
-      ) {
-        createUnsignedRidePay(
-          rideAcceptanceTransactionHash: $rideAcceptanceTransactionHash,
-          fare: $fare
-        )
-      }
-    `;
-    const variables = {
-      rideAcceptanceTransactionHash: args.rideAcceptanceTxHash,
-      fare: args.fare.toString(),
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRidePay: UnsignedTransaction;
-    }>(query, variables);
-    return result.createUnsignedRidePay;
+    return this.createUnsigned('createUnsignedRidePay', {
+      rideAcceptanceTransactionHash: ['String!', args.rideAcceptanceTxHash],
+      fare: ['String!', args.fare.toString()],
+    });
   }
 
   /**
@@ -788,19 +729,9 @@ export class ClutchHubSdk {
    * Refunds unpaid fare to the passenger. Cannot cancel if full fare has already been paid.
    */
   public async createUnsignedRideCancel(args: RideCancelArgs): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedRideCancel($rideAcceptanceTransactionHash: String!) {
-        createUnsignedRideCancel(rideAcceptanceTransactionHash: $rideAcceptanceTransactionHash)
-      }
-    `;
-    const variables = {
-      rideAcceptanceTransactionHash: args.rideAcceptanceTxHash,
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRideCancel: UnsignedTransaction;
-    }>(query, variables);
-    return result.createUnsignedRideCancel;
+    return this.createUnsigned('createUnsignedRideCancel', {
+      rideAcceptanceTransactionHash: ['String!', args.rideAcceptanceTxHash],
+    });
   }
 
   /**
@@ -808,19 +739,9 @@ export class ClutchHubSdk {
    * Only the passenger who created the request can cancel.
    */
   public async createUnsignedRideRequestCancel(args: RideRequestCancelArgs): Promise<UnsignedTransaction> {
-    await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedRideRequestCancel($rideRequestTransactionHash: String!) {
-        createUnsignedRideRequestCancel(rideRequestTransactionHash: $rideRequestTransactionHash)
-      }
-    `;
-    const variables = {
-      rideRequestTransactionHash: args.rideRequestTxHash,
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedRideRequestCancel: UnsignedTransaction;
-    }>(query, variables);
-    return result.createUnsignedRideRequestCancel;
+    return this.createUnsigned('createUnsignedRideRequestCancel', {
+      rideRequestTransactionHash: ['String!', args.rideRequestTxHash],
+    });
   }
 
   /**
@@ -828,20 +749,29 @@ export class ClutchHubSdk {
    * optionally tagged with a treasury `redemptionRef` (hex(keccak256(intent_id))).
    */
   public async createUnsignedBurn(args: BurnArgs): Promise<UnsignedTransaction> {
+    return this.createUnsigned('createUnsignedBurn', {
+      amount: ['String!', args.amount.toString()],
+      redemptionRef: ['String', args.redemptionRef ?? null],
+    });
+  }
+
+  /**
+   * Runs one of the hub's `createUnsigned*` mutations (JWT-guarded). `params` maps each argument
+   * name to its GraphQL type and value; the argument names are the variable names.
+   */
+  private async createUnsigned(
+    field: string,
+    params: Record<string, [type: string, value: unknown]>
+  ): Promise<UnsignedTransaction> {
     await this.ensureAuth();
-    const query = `
-      mutation CreateUnsignedBurn($amount: String!, $redemptionRef: String) {
-        createUnsignedBurn(amount: $amount, redemptionRef: $redemptionRef)
-      }
-    `;
-    const variables = {
-      amount: args.amount.toString(),
-      redemptionRef: args.redemptionRef ?? null,
-    };
-    const result = await this.executeGraphQL<{
-      createUnsignedBurn: UnsignedTransaction;
-    }>(query, variables);
-    return result.createUnsignedBurn;
+    const names = Object.keys(params);
+    const operation = field[0].toUpperCase() + field.slice(1);
+    const declarations = names.map((n) => `$${n}: ${params[n][0]}`).join(', ');
+    const args = names.map((n) => `${n}: $${n}`).join(', ');
+    const query = `mutation ${operation}(${declarations}) { ${field}(${args}) }`;
+    const variables = Object.fromEntries(names.map((n) => [n, params[n][1]]));
+    const result = await this.executeGraphQL<Record<string, UnsignedTransaction>>(query, variables);
+    return result[field];
   }
 
   /**
@@ -996,7 +926,7 @@ export class ClutchHubSdk {
    * Subscribe to active trips, optionally filtered by driver or passenger address.
    */
   public subscribeActiveTrips(
-    options: { driverAddress?: string; passengerAddress?: string } | undefined,
+    options: TripFilter | undefined,
     handlers: SubscriptionHandlers<AvailableActiveTrip[]>
   ): () => void {
     const query = `
@@ -1008,10 +938,7 @@ export class ClutchHubSdk {
     `;
     return this.subscribeGraphqlListField<AvailableActiveTrip>(
       query,
-      {
-        driverAddress: options?.driverAddress ?? null,
-        passengerAddress: options?.passengerAddress ?? null,
-      },
+      tripFilterVariables(options),
       'activeTripsUpdated',
       handlers
     );
@@ -1021,7 +948,7 @@ export class ClutchHubSdk {
    * Subscribe to completed trips, optionally filtered by driver or passenger address.
    */
   public subscribeCompletedTrips(
-    options: { driverAddress?: string; passengerAddress?: string } | undefined,
+    options: TripFilter | undefined,
     handlers: SubscriptionHandlers<AvailableCompletedTrip[]>
   ): () => void {
     const query = `
@@ -1033,10 +960,7 @@ export class ClutchHubSdk {
     `;
     return this.subscribeGraphqlListField<AvailableCompletedTrip>(
       query,
-      {
-        driverAddress: options?.driverAddress ?? null,
-        passengerAddress: options?.passengerAddress ?? null,
-      },
+      tripFilterVariables(options),
       'completedTripsUpdated',
       handlers
     );
@@ -1046,7 +970,7 @@ export class ClutchHubSdk {
    * Subscribe to recent finished trips (completed or cancelled), optionally filtered by driver or passenger.
    */
   public subscribeRecentTrips(
-    options: { driverAddress?: string; passengerAddress?: string } | undefined,
+    options: TripFilter | undefined,
     handlers: SubscriptionHandlers<AvailableRecentTrip[]>
   ): () => void {
     const query = `
@@ -1058,10 +982,7 @@ export class ClutchHubSdk {
     `;
     return this.subscribeGraphqlListField<AvailableRecentTrip>(
       query,
-      {
-        driverAddress: options?.driverAddress ?? null,
-        passengerAddress: options?.passengerAddress ?? null,
-      },
+      tripFilterVariables(options),
       'recentTripsUpdated',
       handlers
     );
@@ -1071,11 +992,7 @@ export class ClutchHubSdk {
     const query = `
       query ListRideRequests($bounds: MapBoundsInput) {
         listRideRequests(bounds: $bounds) {
-          txHash
-          pickupLocation { latitude longitude }
-          dropoffLocation { latitude longitude }
-          fare
-          passengerAddress
+          ${RIDE_REQUEST_GQL_FIELDS}
         }
       }
     `;
@@ -1094,10 +1011,7 @@ export class ClutchHubSdk {
     const query = `
       query ListRideOffers($rideRequestTxHash: String!) {
         listRideOffers(rideRequestTxHash: $rideRequestTxHash) {
-          txHash
-          rideRequestTxHash
-          fare
-          driverAddress
+          ${RIDE_OFFER_GQL_FIELDS}
         }
       }
     `;
@@ -1111,88 +1025,44 @@ export class ClutchHubSdk {
    * Lists active trips (ride accepted, in progress).
    * Optionally filter by driver or passenger address.
    */
-  public async listActiveTrips(options?: {
-    driverAddress?: string;
-    passengerAddress?: string;
-  }): Promise<AvailableActiveTrip[]> {
-    const query = `
-      query ListActiveTrips($driverAddress: String, $passengerAddress: String) {
-        listActiveTrips(driverAddress: $driverAddress, passengerAddress: $passengerAddress) {
-          txHash
-          rideOfferTxHash
-          rideRequestTxHash
-          pickupLocation { latitude longitude }
-          dropoffLocation { latitude longitude }
-          fare
-          farePaid
-          driverAddress
-          passengerAddress
-        }
-      }
-    `;
-    const result = await this.executeGraphQL<{
-      listActiveTrips: (Omit<AvailableActiveTrip, 'fare' | 'farePaid'> & { fare: string; farePaid: string })[];
-    }>(query, {
-      driverAddress: options?.driverAddress ?? null,
-      passengerAddress: options?.passengerAddress ?? null,
-    });
-    return result.listActiveTrips.map((r) => ({ ...r, fare: BigInt(r.fare), farePaid: BigInt(r.farePaid) }));
+  public async listActiveTrips(options?: TripFilter): Promise<AvailableActiveTrip[]> {
+    return this.listTrips<AvailableActiveTrip>('listActiveTrips', ACTIVE_TRIP_GQL_FIELDS, options);
   }
 
   /**
    * Lists completed trips (accepted, full fare paid, not cancelled).
    * Optionally filter by driver or passenger address.
    */
-  public async listCompletedTrips(options?: {
-    driverAddress?: string;
-    passengerAddress?: string;
-  }): Promise<AvailableCompletedTrip[]> {
-    const query = `
-      query ListCompletedTrips($driverAddress: String, $passengerAddress: String) {
-        listCompletedTrips(driverAddress: $driverAddress, passengerAddress: $passengerAddress) {
-          txHash
-          rideOfferTxHash
-          rideRequestTxHash
-          pickupLocation { latitude longitude }
-          dropoffLocation { latitude longitude }
-          fare
-          farePaid
-          driverAddress
-          passengerAddress
-        }
-      }
-    `;
-    const result = await this.executeGraphQL<{
-      listCompletedTrips: (Omit<AvailableCompletedTrip, 'fare' | 'farePaid'> & { fare: string; farePaid: string })[];
-    }>(query, {
-      driverAddress: options?.driverAddress ?? null,
-      passengerAddress: options?.passengerAddress ?? null,
-    });
-    return result.listCompletedTrips.map((r) => ({ ...r, fare: BigInt(r.fare), farePaid: BigInt(r.farePaid) }));
+  public async listCompletedTrips(options?: TripFilter): Promise<AvailableCompletedTrip[]> {
+    return this.listTrips<AvailableCompletedTrip>('listCompletedTrips', ACTIVE_TRIP_GQL_FIELDS, options);
   }
 
   /**
    * Lists recent finished trips (full fare paid or cancelled).
    * Optionally filter by driver or passenger address.
    */
-  public async listRecentTrips(options?: {
-    driverAddress?: string;
-    passengerAddress?: string;
-  }): Promise<AvailableRecentTrip[]> {
+  public async listRecentTrips(options?: TripFilter): Promise<AvailableRecentTrip[]> {
+    return this.listTrips<AvailableRecentTrip>('listRecentTrips', RECENT_TRIP_GQL_FIELDS, options);
+  }
+
+  /** One of the trip list queries, with `fare` and `farePaid` read as bigints. */
+  private async listTrips<T extends { fare: bigint; farePaid: bigint }>(
+    field: 'listActiveTrips' | 'listCompletedTrips' | 'listRecentTrips',
+    fields: string,
+    options?: TripFilter
+  ): Promise<T[]> {
+    const operation = field[0].toUpperCase() + field.slice(1);
     const query = `
-      query ListRecentTrips($driverAddress: String, $passengerAddress: String) {
-        listRecentTrips(driverAddress: $driverAddress, passengerAddress: $passengerAddress) {
-          ${RECENT_TRIP_GQL_FIELDS}
+      query ${operation}($driverAddress: String, $passengerAddress: String) {
+        ${field}(driverAddress: $driverAddress, passengerAddress: $passengerAddress) {
+          ${fields}
         }
       }
     `;
-    const result = await this.executeGraphQL<{
-      listRecentTrips: (Omit<AvailableRecentTrip, 'fare' | 'farePaid'> & { fare: string; farePaid: string })[];
-    }>(query, {
-      driverAddress: options?.driverAddress ?? null,
-      passengerAddress: options?.passengerAddress ?? null,
-    });
-    return result.listRecentTrips.map((r) => ({ ...r, fare: BigInt(r.fare), farePaid: BigInt(r.farePaid) }));
+    const result = await this.executeGraphQL<
+      Record<string, (Omit<T, 'fare' | 'farePaid'> & { fare: string; farePaid: string })[]>
+    >(query, tripFilterVariables(options));
+    return result[field].map((r) => ({ ...r, fare: BigInt(r.fare), farePaid: BigInt(r.farePaid) }) as T);
   }
 
   /**

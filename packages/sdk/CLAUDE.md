@@ -29,11 +29,10 @@ Only five source files — the SDK is deliberately small:
   `Signature`, …).
 - `src/index.ts` — barrel re-exports. New public symbols must be reachable from here.
 
-Tests live in `test/*.test.mjs` and use Node's built-in runner (`npm test` → `node --test test/`),
+Tests live in `test/*.test.mjs` and use Node's built-in runner (`npm test`),
 no framework. They import from `dist/`, so `npm run build` first; the release workflow runs them
-after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` beside
-this file are older ad-hoc manual scripts, not part of `npm test`. They used to be published to npm
-by accident and no longer are — `files` in `package.json` now lists exactly `dist` and `src`.
+after the build and before semantic-release. The script is `node --test test/*.test.mjs`: a bare
+directory stopped working in Node 22.
 
 ## Signers and wallets (since 2026-10-06)
 
