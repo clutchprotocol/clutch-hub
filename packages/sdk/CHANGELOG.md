@@ -1,3 +1,10 @@
+## [4.4.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.3.0...v4.4.0) (2026-10-06)
+
+
+### Features
+
+* **sdk:** sign with TronLink (signMessageV2, TIP-191), and the demo app connects it ([#32](https://github.com/clutchprotocol/clutch-hub/issues/32)) ([57fdd06](https://github.com/clutchprotocol/clutch-hub/commit/57fdd06297ff0b1f434d4b27d4941777772baeec))
+
 ## [4.3.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.2.1...v4.3.0) (2026-10-06)
 
 
