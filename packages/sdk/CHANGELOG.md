@@ -1,3 +1,5 @@
+## [4.4.1](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.0...v4.4.1) (2026-10-06)
+
 ## [4.4.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.3.0...v4.4.0) (2026-10-06)
 
 
