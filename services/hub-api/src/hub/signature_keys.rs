@@ -43,6 +43,18 @@ impl SignatureKeys {
         s.trim_start_matches("0x").trim_start_matches("0X")
     }
 
+    /// The bytes a wallet's `personal_sign` (EIP-191, version `0x45`) puts through Keccak-256:
+    /// a fixed prefix, the message length in decimal, then the message.
+    ///
+    /// `sign`, `recover_public_key` and `verify_key_ownership` all hash their input with
+    /// Keccak-256, so giving them these bytes in place of the message gives a wallet's digest
+    /// exactly. MetaMask and Trust Wallet will not sign a bare hash, and they will sign this.
+    pub fn personal_sign_bytes(message: &[u8]) -> Vec<u8> {
+        let mut bytes = format!("\x19Ethereum Signed Message:\n{}", message.len()).into_bytes();
+        bytes.extend_from_slice(message);
+        bytes
+    }
+
     pub fn sign(secret_key: &str, data: &[u8]) -> (String, String, i32) {
         let secp = Secp256k1::new();
 
@@ -251,5 +263,33 @@ mod tests {
         let wrong_length = "abc123";
         let result = SignatureKeys::validate_public_key(wrong_length);
         assert!(result.is_err(), "Wrong length key should be rejected");
+    }
+
+    #[test]
+    fn personal_sign_bytes_has_the_eip191_layout() {
+        assert_eq!(
+            SignatureKeys::personal_sign_bytes(b"hello"),
+            b"\x19Ethereum Signed Message:\n5hello".to_vec()
+        );
+        // The length counts bytes, not characters: "é" is two bytes.
+        assert_eq!(
+            SignatureKeys::personal_sign_bytes("é".as_bytes()),
+            "\x19Ethereum Signed Message:\n2é".as_bytes().to_vec()
+        );
+        // The length is written in decimal, however many digits it needs.
+        let long = "x".repeat(123);
+        let mut expected = b"\x19Ethereum Signed Message:\n123".to_vec();
+        expected.extend_from_slice(long.as_bytes());
+        assert_eq!(SignatureKeys::personal_sign_bytes(long.as_bytes()), expected);
+    }
+
+    #[test]
+    fn personal_sign_digest_matches_the_published_hello_world_vector() {
+        // `hashMessage("Hello World")` from the ethers documentation: it does not come from this code.
+        let digest = Keccak256::digest(SignatureKeys::personal_sign_bytes(b"Hello World"));
+        assert_eq!(
+            hex::encode(digest),
+            "a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"
+        );
     }
 }
