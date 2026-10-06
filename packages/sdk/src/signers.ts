@@ -44,6 +44,12 @@ export interface AuthChallengeSigningRequest {
 export interface Signer {
   /** The account this signer signs for: `0x` and 40 lowercase hex characters. */
   readonly address: string;
+  /**
+   * True when signing opens a prompt for a person (a wallet). The SDK never asks such a signer for
+   * a signature in the background, for example when a subscription reconnects; only a call the
+   * app makes (create or sign a transaction) can open a prompt.
+   */
+  readonly interactive?: boolean;
   /** Sign a transaction. A key signs the hash string; a wallet signs `walletTransactionText`. */
   signTransaction(request: TransactionSigningRequest): Promise<Signature>;
   /** Sign the Hub API's proof-of-key-ownership challenge. A key signs its hash; a wallet signs the message. */
@@ -132,6 +138,7 @@ export function createWalletSigner(provider: Eip1193Provider, address: string): 
 
   return {
     address: account,
+    interactive: true,
     signTransaction: ({ hashHex, chainId }) => personalSign(walletTransactionText(chainId, hashHex)),
     signAuthChallenge: ({ message }) => personalSign(message),
   };

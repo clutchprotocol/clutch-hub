@@ -524,6 +524,17 @@ export class ClutchHubSdk {
     return !!(this.token && now < (this.tokenExpireTime - bufferTime));
   }
 
+  /**
+   * True when a token for this account is cached and still good, so the next authenticated call
+   * opens no sign-in prompt. `isAuthenticated` looks at this instance only; this looks at the
+   * cache that every instance of the account shares. A poll should check it first: a wallet's
+   * sign-in prompt belongs to something the user did, never to a timer.
+   */
+  public hasValidToken(): boolean {
+    const cached = globalTokenCache.get(this.publicKey);
+    return !!cached && Date.now() < cached.expireTimeMs - 30000;
+  }
+
   private get authHeaders(): Record<string, string> {
     return this.token ? { Authorization: `Bearer ${this.token}` } : {};
   }
@@ -551,20 +562,9 @@ export class ClutchHubSdk {
     const key = sharedGraphqlWsCacheKey(base, this.publicKey);
     let entry = sharedGraphqlWsClients.get(key);
     if (!entry) {
-      const pk = this.publicKey;
-      const apiClient = this.apiClient;
-      const chainId = this.chainId;
       const client = createHubSubscriptionClient({
         url: hubGraphqlWsUrl(base),
-        connectionParams: async () => {
-          try {
-            await ensureTokenInCacheForPublicKey(pk, apiClient, chainId);
-          } catch {
-            /* public list subscriptions work without JWT */
-          }
-          const c = globalTokenCache.get(pk);
-          return c?.token ? { Authorization: `Bearer ${c.token}` } : {};
-        },
+        connectionParams: () => this.wsConnectionParams(),
       });
       entry = { client, refcount: 0 };
       sharedGraphqlWsClients.set(key, entry);
@@ -582,6 +582,29 @@ export class ClutchHubSdk {
       }
     };
     return { client: entry.client, release };
+  }
+
+  /**
+   * The `connection_init` payload of the shared socket: a token when there is one to send.
+   *
+   * The subscriptions are public, so a token is optional here. This runs at every connect and
+   * every reconnect (the socket retries for ever), with nobody watching, so a signer that opens a
+   * prompt (a wallet) is not asked for a signature: a token from an earlier, explicit action is
+   * still sent. A key signs silently and is asked as before.
+   */
+  private async wsConnectionParams(): Promise<Record<string, string>> {
+    const pk = this.publicKey;
+    if (!globalSigners.get(pk)?.interactive) {
+      try {
+        await ensureTokenInCacheForPublicKey(pk, this.apiClient, this.chainId);
+      } catch {
+        /* public list subscriptions work without JWT */
+      }
+    }
+    const cached = globalTokenCache.get(pk);
+    return cached?.token && Date.now() < cached.expireTimeMs
+      ? { Authorization: `Bearer ${cached.token}` }
+      : {};
   }
 
   /**

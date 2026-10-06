@@ -271,6 +271,66 @@ test('setSigner replaces the signer for the account', async () => {
   assert.equal(wallet.calls.length, 1);
 });
 
+const tokenReply = () => ({
+  data: { data: { generateToken: { token: 'token', expiresAt: Math.floor(Date.now() / 1000) + 3600 } } },
+});
+
+test('the shared socket never asks a wallet to sign in the background', async () => {
+  const key = hex(secp.utils.randomPrivateKey());
+  const address = addressFromPrivateKey(key);
+  const wallet = fakeWallet({ key, accounts: [address] });
+  const sdk = new ClutchHubSdk('http://hub.test', address, createWalletSigner(wallet, address), 2077);
+  let posts = 0;
+  sdk.apiClient.post = async () => {
+    posts += 1;
+    return tokenReply();
+  };
+
+  // A reconnect with no token: the subscriptions are public, so it goes without one, and no prompt opens.
+  assert.deepEqual(await sdk.wsConnectionParams(), {});
+  assert.equal(wallet.calls.length, 0);
+  assert.equal(posts, 0);
+
+  // Once the app has signed in on purpose, the token is sent and nothing new is asked.
+  await sdk.ensureAuth();
+  assert.equal(wallet.calls.length, 1);
+  assert.deepEqual(await sdk.wsConnectionParams(), { Authorization: 'Bearer token' });
+  assert.equal(wallet.calls.length, 1);
+});
+
+test('the shared socket still signs in with a key, silently, as before', async () => {
+  const key = hex(secp.utils.randomPrivateKey());
+  const address = addressFromPrivateKey(key);
+  const sdk = new ClutchHubSdk('http://hub.test', address, key, 2077);
+  let posts = 0;
+  sdk.apiClient.post = async () => {
+    posts += 1;
+    return tokenReply();
+  };
+  assert.deepEqual(await sdk.wsConnectionParams(), { Authorization: 'Bearer token' });
+  assert.equal(posts, 1);
+});
+
+test('hasValidToken is true once the account has signed in, for every instance of it', async () => {
+  const key = hex(secp.utils.randomPrivateKey());
+  const address = addressFromPrivateKey(key);
+  const first = new ClutchHubSdk('http://hub.test', address, createWalletSigner(fakeWallet({ key, accounts: [address] }), address), 2077);
+  const second = new ClutchHubSdk('http://hub.test', address, undefined, 2077);
+  first.apiClient.post = async () => tokenReply();
+
+  assert.equal(first.hasValidToken(), false);
+  assert.equal(second.hasValidToken(), false);
+  await first.ensureAuth();
+  assert.equal(first.hasValidToken(), true);
+  assert.equal(second.hasValidToken(), true, 'the token is shared, so another instance needs no prompt either');
+});
+
+test('the shared socket sends nothing, and does not throw, when there is no signer', async () => {
+  const address = addressFromPrivateKey(hex(secp.utils.randomPrivateKey()));
+  const sdk = new ClutchHubSdk('http://hub.test', address, undefined, 2077);
+  assert.deepEqual(await sdk.wsConnectionParams(), {});
+});
+
 test('login without any key or signer says what is missing', async () => {
   const address = addressFromPrivateKey(hex(secp.utils.randomPrivateKey()));
   const sdk = new ClutchHubSdk('http://hub.test', address, undefined, 2077);
