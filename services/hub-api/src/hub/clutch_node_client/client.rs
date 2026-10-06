@@ -1,17 +1,14 @@
-use super::connection::start_connection_loop;
+use super::connection::{start_connection_loop, PendingRequests, WsSink};
 use super::types::{JSONRPCRequest, JSONRPCResponse};
-use futures_util::stream::SplitSink;
 use futures_util::SinkExt;
 use serde::Deserialize;
 use serde_json;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::net::TcpStream;
 use tokio::sync::{oneshot, Mutex};
 use tokio::time::{timeout, Duration};
 use tokio_tungstenite::tungstenite::protocol::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::info;
 use uuid::Uuid;
 
@@ -34,8 +31,8 @@ fn deserialize_total_supply<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u6
 }
 
 pub struct ClutchNodeClient {
-    ws_sink: Arc<Mutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>,
-    pending_requests: Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>,
+    ws_sink: WsSink,
+    pending_requests: PendingRequests,
 }
 
 impl ClutchNodeClient {
@@ -65,29 +62,17 @@ impl ClutchNodeClient {
     ) -> Result<serde_json::Value, String> {
         let id = Uuid::new_v4().to_string();
         
-        // Format the request based on the method type
-        // For send_raw_transaction, params should be a direct string not an object
-        let request = if method == "send_raw_transaction" {
-            // For send_raw_transaction, extract the string from the Value
-            let tx_string = match &params {
-                serde_json::Value::String(s) => s.clone(),
-                _ => params.as_str().unwrap_or_default().to_string(),
-            };
-            
-            JSONRPCRequest {
-                jsonrpc: "2.0".to_string(),
-                method: method.to_string(),
-                params: serde_json::Value::String(tx_string),
-                id: id.clone(),
-            }
+        // send_raw_transaction takes the raw hex as a bare string, never an object.
+        let params = if method == "send_raw_transaction" {
+            serde_json::Value::String(params.as_str().unwrap_or_default().to_string())
         } else {
-            // For other methods, use the params as provided
-            JSONRPCRequest {
-                jsonrpc: "2.0".to_string(),
-                method: method.to_string(),
-                params,
-                id: id.clone(),
-            }
+            params
+        };
+        let request = JSONRPCRequest {
+            jsonrpc: "2.0".to_string(),
+            method: method.to_string(),
+            params,
+            id: id.clone(),
         };
 
         let request_json = serde_json::to_string(&request).map_err(|e| e.to_string())?;

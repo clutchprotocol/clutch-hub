@@ -29,9 +29,9 @@ pub fn build_schema(
         config.token_rate_limit_global_per_minute,
     ));
     Schema::build(
-        Query::default(),
-        Mutation::default(),
-        Subscription::default(),
+        Query,
+        Mutation,
+        Subscription,
     )
     .data(ws_manager)
     .data(config)

@@ -13,11 +13,14 @@ use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 use tokio_tungstenite::tungstenite::protocol::Message;
 use tracing::{error, info};
 
-pub async fn start_connection_loop(
-    url: String,
-    ws_sink: Arc<Mutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>,
-    pending_requests: Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>,
-) {
+/// The write half of the node connection; `None` while disconnected.
+pub(super) type WsSink =
+    Arc<Mutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>;
+
+/// Requests awaiting a reply, by JSON-RPC id.
+pub(super) type PendingRequests = Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>;
+
+pub async fn start_connection_loop(url: String, ws_sink: WsSink, pending_requests: PendingRequests) {
     loop {
         match connect_async(&url).await {
             Ok((ws_stream, _)) => {
@@ -75,10 +78,7 @@ pub async fn start_connection_loop(
     }
 }
 
-async fn handle_incoming_message(
-    text: String,
-    pending_requests: Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>,
-) {
+async fn handle_incoming_message(text: String, pending_requests: PendingRequests) {
     match serde_json::from_str::<JSONRPCResponse>(&text) {
         Ok(response) => {
             let mut pending = pending_requests.lock().await;

@@ -6,7 +6,6 @@ use secp256k1::{
 use sha3::{Digest, Keccak256};
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct SignatureKeys {
     pub secret_key: String,
     pub public_key: String,
@@ -14,17 +13,16 @@ pub struct SignatureKeys {
 }
 
 impl SignatureKeys {
-    #[allow(dead_code)]
     pub fn generate_new_keypair() -> Self {
         let secp = Secp256k1::new();
-        let mut rng = OsRng::default();
+        let mut rng = OsRng;
         let (secret_key, public_key) = secp.generate_keypair(&mut rng);
         let address_key = Self::derive_address(&public_key);
 
         SignatureKeys {
             secret_key: hex::encode(secret_key.as_ref()),
             public_key: hex::encode(public_key.serialize_uncompressed()),
-            address_key: address_key,
+            address_key,
         }
     }
 
@@ -218,13 +216,10 @@ mod tests {
         let (r, s, v) = SignatureKeys::sign(&keys.secret_key, original_data);
 
         // Attempt to verify signature against modified data
-        match SignatureKeys::verify(&keys.address_key, modified_data, &r, &s, v) {
-            Ok(is_verified) => assert!(
-                !is_verified,
-                "Signature verification should fail on modified data"
-            ),
-            Err(_) => assert!(true, "Expected verification failure on modified data"),
-        }
+        assert!(
+            !matches!(SignatureKeys::verify(&keys.address_key, modified_data, &r, &s, v), Ok(true)),
+            "Signature verification should fail on modified data"
+        );
     }
 
     #[test]
@@ -237,16 +232,10 @@ mod tests {
         let (r, s, v) = SignatureKeys::sign(&keys.secret_key, data);
 
         // Attempt to verify signature with a different public key
-        match SignatureKeys::verify(&other_keys.address_key, data, &r, &s, v) {
-            Ok(is_verified) => assert!(
-                !is_verified,
-                "Signature verification should fail with a different public key"
-            ),
-            Err(_) => assert!(
-                true,
-                "Expected verification failure with a different public key"
-            ),
-        }
+        assert!(
+            !matches!(SignatureKeys::verify(&other_keys.address_key, data, &r, &s, v), Ok(true)),
+            "Signature verification should fail with a different public key"
+        );
     }
 
     #[test]

@@ -11,7 +11,6 @@ use crate::hub::{
 };
 use async_graphql::{Context, Json, Object};
 use serde_json::json;
-use thiserror::Error;
 use tracing::{error, info};
 
 /// Fetches the chain_id cached at startup (see `main.rs`) from schema data.
@@ -19,16 +18,6 @@ fn require_chain_id(ctx: &Context<'_>) -> async_graphql::Result<u64> {
     ctx.data::<Arc<ChainInfo>>()
         .map(|c| c.chain_id)
         .map_err(|_| async_graphql::Error::new("Chain info not found"))
-}
-
-#[derive(Debug, Error)]
-pub enum MutationError {
-    #[error("Authentication failed: {0}")]
-    AuthError(String),
-    #[error("Internal server error: {0}")]
-    InternalError(String),
-    #[error("Invalid request: {0}")]
-    InvalidRequest(String),
 }
 
 #[derive(Default)]
