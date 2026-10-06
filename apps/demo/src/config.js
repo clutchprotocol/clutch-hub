@@ -80,8 +80,8 @@ export const ORCHESTRATOR_BASE_URL =
     : "/payment";
 
 /**
- * The block explorer for this network, or null when it has none (see explorerUrlForHost: only the
- * testnet has one today). The hostname decides for deployed hosts. `VITE_EXPLORER_URL` is only for
+ * The block explorer for this network, or null when it has none (see explorerUrlForHost: the
+ * testnet and mainnet each have their own). The hostname decides for deployed hosts. `VITE_EXPLORER_URL` is only for
  * local dev, where the hostname says nothing (e.g. http://localhost:5174 from clutch-deploy's dev
  * stack). The published image does not set it, so one image stays correct on testnet and mainnet.
  */
