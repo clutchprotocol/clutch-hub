@@ -43,17 +43,20 @@ pub fn auth_challenge_hash_hex(chain_id: u64, public_key: &str, timestamp: i64) 
 
 /// Verify proof of key ownership for `generateToken`.
 ///
-/// Two signatures are accepted. Each is checked against its own digest, so one cannot pass for
-/// the other:
+/// Three signatures are accepted. Each is checked against its own digest, so one cannot pass for
+/// another:
 /// 1. a key that signed [`auth_challenge_hash_hex`] (the SDK with a local key);
 /// 2. a wallet that signed the readable message from [`build_auth_challenge_message`] with
 ///    `personal_sign` (EIP-191). MetaMask and Trust Wallet will not sign a hash string, and the
-///    user sees `clutch-auth:{chain_id}:{publicKey}:{timestamp}` in the wallet's prompt.
+///    user sees `clutch-auth:{chain_id}:{publicKey}:{timestamp}` in the wallet's prompt;
+/// 3. TronLink, which signed the same readable message with TIP-191 `signMessageV2`: the same key
+///    and the same address, with the prefix `\x19TRON Signed Message:\n` in place of the
+///    Ethereum one.
 ///
 /// Rejects when:
 /// - `public_key` is not a 40-char address / 130-char uncompressed public key,
 /// - `timestamp` deviates more than [`AUTH_TIMESTAMP_WINDOW_SECS`] from `now_secs`, or
-/// - neither recoverable signature `(r, s, v)` recovers to `public_key`.
+/// - none of the three recoverable signatures `(r, s, v)` recovers to `public_key`.
 pub fn verify_auth_challenge(
     chain_id: u64,
     public_key: &str,
@@ -84,7 +87,12 @@ pub fn verify_auth_challenge(
         return Ok(());
     }
 
-    // Neither matched. A malformed signature keeps its own error; a well-formed one from the
+    let tron_bytes = SignatureKeys::tron_sign_bytes(message.as_bytes());
+    if let Ok(true) = SignatureKeys::verify_key_ownership(public_key, &tron_bytes, r, s, v) {
+        return Ok(());
+    }
+
+    // None matched. A malformed signature keeps its own error; a well-formed one from the
     // wrong key is a mismatch.
     match direct {
         Ok(_) => Err("signature does not match the provided public key".to_string()),
@@ -345,6 +353,80 @@ mod tests {
         assert!(verify_auth_challenge(1000, public_key, timestamp + 1, r, s, 28, timestamp).is_err());
         // And the other recovery id gives another key.
         assert!(verify_auth_challenge(1000, public_key, timestamp, r, s, 27, timestamp).is_err());
+    }
+
+    /// Sign the challenge the way TronLink does: TIP-191 `signMessageV2` over the readable message.
+    fn sign_challenge_as_tronlink(
+        secret_key: &str,
+        chain_id: u64,
+        public_key: &str,
+        timestamp: i64,
+    ) -> (String, String, i32) {
+        let message = build_auth_challenge_message(chain_id, public_key, timestamp);
+        SignatureKeys::sign(secret_key, &SignatureKeys::tron_sign_bytes(message.as_bytes()))
+    }
+
+    #[test]
+    fn tronlink_signed_challenge_passes() {
+        let keys = SignatureKeys::generate_new_keypair();
+        let (r, s, v) = sign_challenge_as_tronlink(&keys.secret_key, CHAIN_ID, &keys.address_key, NOW);
+        assert!(verify_auth_challenge(CHAIN_ID, &keys.address_key, NOW, &r, &s, v, NOW).is_ok());
+    }
+
+    #[test]
+    fn tronlink_signed_challenge_fails_for_another_chain_timestamp_or_key() {
+        let keys = SignatureKeys::generate_new_keypair();
+        let other = SignatureKeys::generate_new_keypair();
+        let (r, s, v) = sign_challenge_as_tronlink(&keys.secret_key, CHAIN_ID, &keys.address_key, NOW);
+
+        // Signed for chain 2077: no other chain accepts it.
+        assert!(verify_auth_challenge(CHAIN_ID + 1, &keys.address_key, NOW, &r, &s, v, NOW).is_err());
+        // Signed for NOW, shown with a different, still in-window, timestamp.
+        assert!(verify_auth_challenge(CHAIN_ID, &keys.address_key, NOW + 30, &r, &s, v, NOW).is_err());
+        // Signed for one key, shown for another.
+        assert!(verify_auth_challenge(CHAIN_ID, &other.address_key, NOW, &r, &s, v, NOW).is_err());
+
+        // Another key signs the challenge of the first one.
+        let (r2, s2, v2) = sign_challenge_as_tronlink(&other.secret_key, CHAIN_ID, &keys.address_key, NOW);
+        assert!(verify_auth_challenge(CHAIN_ID, &keys.address_key, NOW, &r2, &s2, v2, NOW).is_err());
+    }
+
+    #[test]
+    fn tronlink_signed_challenge_outside_the_window_fails() {
+        let keys = SignatureKeys::generate_new_keypair();
+        for skew in [-(AUTH_TIMESTAMP_WINDOW_SECS + 1), AUTH_TIMESTAMP_WINDOW_SECS + 1] {
+            let ts = NOW + skew;
+            let (r, s, v) = sign_challenge_as_tronlink(&keys.secret_key, CHAIN_ID, &keys.address_key, ts);
+            let err = verify_auth_challenge(CHAIN_ID, &keys.address_key, ts, &r, &s, v, NOW).unwrap_err();
+            assert!(err.contains("window"), "skew {}s should be rejected: {}", skew, err);
+        }
+    }
+
+    /// Made by TronWeb 6.5.1 itself (`trx.signMessageV2`, the library TronLink wraps) over
+    /// `clutch-auth:1000:0xdeb4cfb63db134698e1879ea24904df074726cc0:1751500000`, for the dev key
+    /// d2c446110cfcecbdf05b2be528e72483de5b6f7ef9c7856df2f81f48e9f2748f. It is not made by this code.
+    #[test]
+    fn tronweb_fixture_verifies() {
+        let public_key = "0xdeb4cfb63db134698e1879ea24904df074726cc0";
+        let timestamp: i64 = 1_751_500_000;
+        let r = "0xbdb280546a1b7955be7ee2a31883f628a132e0b111af2b8f101ff2ee02f68972";
+        let s = "0x5a80d3c656f7ae0b5571bf70fbfad550863ecc445d4402579ea32b271c92659f";
+        assert!(verify_auth_challenge(1000, public_key, timestamp, r, s, 28, timestamp).is_ok());
+        // It is the signature for that chain and that time only.
+        assert!(verify_auth_challenge(CHAIN_ID, public_key, timestamp, r, s, 28, timestamp).is_err());
+        assert!(verify_auth_challenge(1000, public_key, timestamp + 1, r, s, 28, timestamp).is_err());
+        // And the other recovery id gives another key.
+        assert!(verify_auth_challenge(1000, public_key, timestamp, r, s, 27, timestamp).is_err());
+    }
+
+    #[test]
+    fn a_challenge_signed_under_an_unknown_prefix_fails() {
+        let keys = SignatureKeys::generate_new_keypair();
+        let message = build_auth_challenge_message(CHAIN_ID, &keys.address_key, NOW);
+        let bytes = format!("\x19Bitcoin Signed Message:\n{}{}", message.len(), message).into_bytes();
+        let (r, s, v) = SignatureKeys::sign(&keys.secret_key, &bytes);
+        let err = verify_auth_challenge(CHAIN_ID, &keys.address_key, NOW, &r, &s, v, NOW).unwrap_err();
+        assert!(err.contains("does not match"), "got: {}", err);
     }
 
     #[test]
