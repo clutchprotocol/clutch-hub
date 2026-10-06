@@ -10,12 +10,16 @@ This package sits at `packages/sdk` in the `clutch-hub` workspace, beside the re
 
 ## Source Layout
 
-Only four source files — the SDK is deliberately small:
+Only five source files — the SDK is deliberately small:
 
 - `src/sdk.ts` — everything important: `ClutchHubSdk` class, JWT auth caching, signing/hashing,
   RLP encoding (`encodeFunctionCall`), all GraphQL queries/mutations/subscriptions inline as
   template strings. Also exports `stripHexPrefix`, `normalizeTxHashForRlp`,
-  `UnsignedTransaction`.
+  `UnsignedTransaction`, `createLocalSigner`, `addressFromPrivateKey`.
+- `src/signers.ts` — the `Signer` interface and the wallet side of it (added 2026-10-06):
+  `createWalletSigner` (EIP-1193 `personal_sign`), `discoverInjectedWallets` (EIP-6963, then
+  `window.ethereum`), `connectWallet`, `walletTransactionText`, `personalSignDigest`. It must not
+  import `sdk.ts` (`sdk.ts` imports it); that is why `stripHexPrefix` has a private copy there.
 - `src/subscriptions.ts` — `hubGraphqlWsUrl()` (HTTP base URL → `ws(s)://…/graphql/ws`),
   `createHubSubscriptionClient()` (graphql-ws client: `lazy: false`, infinite retry, 10s keepAlive),
   shared GraphQL field-selection constants (`RIDE_REQUEST_GQL_FIELDS` etc.), `SubscriptionHandlers<T>`.
@@ -28,6 +32,28 @@ no framework. They import from `dist/`, so `npm run build` first; the release wo
 after the build and before semantic-release. `test_rlp_fix.{js,mjs}` and `test_wire_v3.mjs` beside
 this file are older ad-hoc manual scripts, not part of `npm test`. They used to be published to npm
 by accident and no longer are — `files` in `package.json` now lists exactly `dist` and `src`.
+
+## Signers and wallets (since 2026-10-06)
+
+Wherever the SDK took a private key string (constructor, `setPrivateKey`, `signTransaction`) it
+takes a `string | Signer`. A `Signer` is `{ address, signTransaction({hashHex, chainId}),
+signAuthChallenge({message, hashHex}) }`; the SDK keeps one per account in a module-global map
+(`globalSigners`, keyed by `publicKey`, like the JWT cache).
+
+- **Key** (`createLocalSigner`): signs the hash string, exactly as before.
+- **Wallet** (`createWalletSigner(provider, address)`): MetaMask and Trust Wallet will not sign a
+  bare hash, so the wallet signs a readable text with `personal_sign` (EIP-191):
+  `clutch-tx:{chainId}:{hash}` for a transaction (hash = 64 lowercase hex, no `0x`) and the plain
+  `clutch-auth:{chainId}:{publicKey}:{timestamp}` for the login. The node
+  (`Transaction::verify_signature`) and the Hub API (`verify_auth_challenge`) accept this next to
+  the key signature. The texts are a contract with those two: change them together or not at all.
+- Wallet quirks handled in `signers.ts`: the message goes to the wallet as `0x`+hex of the UTF-8
+  text (a text that starts with `0x` is read as bytes); the answer is 65 bytes `r||s||v` and `v`
+  is lifted from 0/1 to 27/28; the account is lowercased (the hash commits to `from`, and the node
+  reads it in lower case); the signature is recovered locally and refused if it is from another
+  account than the one asked (the user switched accounts).
+- `test/signers.test.mjs` uses a fake wallet written from the standard (not from the SDK), and pins
+  two signatures that the Rust tests of the node and the Hub API pin too.
 
 ## Transaction Lifecycle (client side)
 

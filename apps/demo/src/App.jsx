@@ -9,9 +9,10 @@ import BalanceDisplay from './components/BalanceDisplay';
 import DepositPanel from './components/DepositPanel';
 import WithdrawPanel from './components/WithdrawPanel';
 import { OverlayPanel } from './components/layout';
-import { WalletBackupExport } from './components/WalletBackup';
 import UpdatePrompt from './components/UpdatePrompt';
 import EnvTag from './components/EnvTag';
+import { useWalletConnection } from './hooks/useWalletConnection';
+import { removeLegacyKeys } from './utils/walletSession';
 import { truncAddr } from './utils/address';
 import { EXPLORER_URL } from './config';
 import './App.css';
@@ -32,12 +33,15 @@ function App() {
   /** Sub-view when activeTab === 'hub' */
   const [hubSubTab, setHubSubTab] = useState('transactions');
 
-  const [userProfile, setUserProfile] = useState({ publicKey: '', privateKey: '' });
+  // The app holds no key. `userProfile` is the connected wallet's address and a signer that asks
+  // the wallet (see hooks/useWalletConnection.js).
+  const connection = useWalletConnection();
+  const userProfile = connection.profile;
   const [menuOpen, setMenuOpen] = useState(false);
   const [passengerViewTab, setPassengerViewTab] = useState(null);
   const [driverViewTab, setDriverViewTab] = useState(null);
   const [walletCopied, setWalletCopied] = useState(false);
-  // One Wallet panel with three tabs (top up, withdraw, back up) replaced three panels.
+  // One Wallet panel with two tabs (top up, withdraw) replaced separate panels.
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletTab, setWalletTab] = useState('wallet-topup');
 
@@ -53,28 +57,30 @@ function App() {
     }
   };
 
-  const handleSignOut = () => {
+  // Older versions kept private keys in this browser's storage in plain text. Delete any that are
+  // still there, once, on start.
+  useEffect(() => {
+    removeLegacyKeys();
+  }, []);
+
+  // Disconnecting only forgets the wallet in this app. The wallet keeps its own list of sites.
+  const handleDisconnect = () => {
     try {
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(ROLE_STORAGE_KEY);
-        window.localStorage.removeItem('clutch_passenger_publicKey');
-        window.localStorage.removeItem('clutch_passenger_privateKey');
-        window.localStorage.removeItem('clutch_driver_publicKey');
-        window.localStorage.removeItem('clutch_driver_privateKey');
       }
     } catch {
       // ignore storage errors; we still reset local state
     }
     setMode(null);
     setActiveTab(null);
-    setUserProfile({ publicKey: '', privateKey: '' });
+    connection.disconnect();
   };
 
+  // `null` is "choose again", from the wallet step.
   const handleEntryRoleSelect = (nextRole) => {
     setMode(nextRole);
     setActiveTab(nextRole);
-    // Clear current profile so the wallet bar uses the newly selected mode.
-    setUserProfile({ publicKey: '', privateKey: '' });
   };
 
   // Persist the chosen mode only after a wallet is actually selected (publicKey exists).
@@ -111,8 +117,7 @@ function App() {
           <RoleEntry
             selectedRole={mode}
             onSelectRole={handleEntryRoleSelect}
-            userProfile={userProfile}
-            onProfileUpdate={setUserProfile}
+            connection={connection}
           />
         </main>
       </div>
@@ -130,7 +135,6 @@ function App() {
       >
         <PassengerView
           userProfile={userProfile}
-          onProfileUpdate={setUserProfile}
           externalTab={passengerViewTab}
           onTabSync={setPassengerViewTab}
         />
@@ -144,7 +148,6 @@ function App() {
       >
         <DriverView
           userProfile={userProfile}
-          onProfileUpdate={setUserProfile}
           externalTab={driverViewTab}
           onTabSync={setDriverViewTab}
         />
@@ -228,7 +231,6 @@ function App() {
           tabs={[
             { id: 'wallet-topup', label: 'Top up' },
             { id: 'wallet-withdraw', label: 'Withdraw' },
-            { id: 'wallet-backup', label: 'Back up' },
           ]}
           activeTab={walletTab}
           onTabChange={setWalletTab}
@@ -257,15 +259,6 @@ function App() {
             userProfile={userProfile}
             open={walletOpen && walletTab === 'wallet-withdraw'}
           />
-        </div>
-        <div
-          role="tabpanel"
-          id="panel-wallet-backup"
-          aria-labelledby="tab-wallet-backup"
-          hidden={walletTab !== 'wallet-backup'}
-          style={{ display: walletTab === 'wallet-backup' ? 'block' : 'none' }}
-        >
-          <WalletBackupExport role={mode} userProfile={userProfile} />
         </div>
       </OverlayPanel>
 
@@ -341,7 +334,9 @@ function App() {
                   </div>
                 </div>
                 <div className="app-menu-profile-wallet">
-                  <div className="app-menu-profile-role-label">Wallet</div>
+                  <div className="app-menu-profile-role-label">
+                    {connection.wallet ? `Wallet · ${connection.wallet.name}` : 'Wallet'}
+                  </div>
                   {userProfile.publicKey ? (
                     <div className="app-menu-profile-wallet-row">
                       <button
@@ -395,10 +390,10 @@ function App() {
                   className="btn-secondary app-menu-signout-btn"
                   onClick={() => {
                     setMenuOpen(false);
-                    handleSignOut();
+                    handleDisconnect();
                   }}
                 >
-                  Sign out
+                  Disconnect wallet
                 </button>
               </div>
             </div>

@@ -29,6 +29,7 @@ import {
   RideRequestCancelArgs,
   Signature,
 } from './types.js';
+import type { Signer } from './signers.js';
 
 /** Strip 0x/0X prefix - hex parsers (e.g. @noble/secp256k1) do not accept it. Exported for consumers. */
 export function stripHexPrefix(hex: string): string {
@@ -106,12 +107,13 @@ const globalTokenCache = new Map<string, TokenCacheEntry>();
 const inFlightTokenRequests = new Map<string, Promise<TokenCacheEntry>>();
 
 /**
- * Module-global private-key store keyed by `publicKey` (parallel to the JWT cache).
+ * Module-global signer store keyed by `publicKey` (parallel to the JWT cache).
  * `generateToken` requires proof of key ownership (a signed challenge), so token issuance
- * needs the wallet's private key. Keys are kept in memory only and are **never** sent to
- * the Hub API — only the challenge signature is.
+ * needs a signer for the account: a private key held in memory (`createLocalSigner`) or a
+ * wallet that signs for it (`createWalletSigner`). A key is kept in memory only and is
+ * **never** sent to the Hub API — only the challenge signature is.
  */
-const globalPrivateKeys = new Map<string, string>();
+const globalSigners = new Map<string, Signer>();
 
 /** Prefix of the canonical proof-of-key-ownership message signed for `generateToken`. */
 export const AUTH_CHALLENGE_PREFIX = 'clutch-auth';
@@ -169,6 +171,33 @@ export async function signAuthChallenge(
   return signHashHex(authChallengeHashHex(chainId, publicKey, timestamp), privateKey);
 }
 
+/** The address of a private key: `0x` and 40 lowercase hex characters. */
+export function addressFromPrivateKey(privateKey: string): string {
+  const publicKey = secp.getPublicKey(stripHexPrefix(privateKey), false); // 0x04 || X || Y
+  return '0x' + Buffer.from(keccak_256(publicKey.slice(1)).slice(-20)).toString('hex');
+}
+
+/**
+ * A signer for a private key held in memory. It signs the hash string, as the SDK always has.
+ * A wallet cannot hand over its key: use `createWalletSigner` for that.
+ */
+export function createLocalSigner(privateKey: string): Signer {
+  return {
+    // A getter, so that a malformed key still fails when something is signed, as it always did,
+    // and not when the SDK is built.
+    get address() {
+      return addressFromPrivateKey(privateKey);
+    },
+    signTransaction: ({ hashHex }) => signHashHex(hashHex, privateKey),
+    signAuthChallenge: ({ hashHex }) => signHashHex(hashHex, privateKey),
+  };
+}
+
+/** Everywhere the SDK takes a private key it also takes a signer. */
+function toSigner(keyOrSigner: string | Signer): Signer {
+  return typeof keyOrSigner === 'string' ? createLocalSigner(keyOrSigner) : keyOrSigner;
+}
+
 type SharedGraphqlWsEntry = { client: Client; refcount: number };
 
 /**
@@ -187,9 +216,9 @@ function sharedGraphqlWsCacheKey(baseURL: string, publicKey: string): string {
  * via the `generateToken` mutation when needed. Shared by `ensureAuth` and the WebSocket
  * `connectionParams` so all SDK instances and subscriptions share tokens.
  *
- * Token issuance signs the proof-of-key-ownership challenge, so a private key for
- * `publicKey` must have been provided (constructor or `setPrivateKey`) unless a cached
- * token is still valid.
+ * Token issuance signs the proof-of-key-ownership challenge, so a signer (or a private key)
+ * for `publicKey` must have been provided (constructor, `setPrivateKey` or `setSigner`)
+ * unless a cached token is still valid. With a wallet this is the prompt the user sees.
  */
 async function ensureTokenInCacheForPublicKey(
   publicKey: string,
@@ -209,10 +238,10 @@ async function ensureTokenInCacheForPublicKey(
     return existingInFlight;
   }
 
-  const privateKey = globalPrivateKeys.get(publicKey);
-  if (!privateKey) {
+  const signer = globalSigners.get(publicKey);
+  if (!signer) {
     throw new Error(
-      `ClutchHubSdk: generateToken requires proof of key ownership; provide the private key for ${publicKey} via the ClutchHubSdk constructor or setPrivateKey().`
+      `ClutchHubSdk: generateToken requires proof of key ownership; provide the private key (or a signer) for ${publicKey} via the ClutchHubSdk constructor, setPrivateKey() or setSigner().`
     );
   }
 
@@ -227,7 +256,10 @@ async function ensureTokenInCacheForPublicKey(
 
   const requestPromise: Promise<TokenCacheEntry> = (async () => {
     const timestamp = Math.floor(Date.now() / 1000);
-    const signature = await signAuthChallenge(chainId, publicKey, timestamp, privateKey);
+    const signature = await signer.signAuthChallenge({
+      message: buildAuthChallengeMessage(chainId, publicKey, timestamp),
+      hashHex: authChallengeHashHex(chainId, publicKey, timestamp),
+    });
     const response = await apiClient.post<{ data?: unknown; errors?: { message: string }[] }>(
       '/graphql',
       {
@@ -426,9 +458,10 @@ export class ClutchHubSdk {
   /**
    * @param apiUrl Hub API base URL.
    * @param publicKey Wallet address (0x + 40 hex) or uncompressed public key (130 hex).
-   * @param privateKey Optional wallet private key, required to obtain JWTs: `generateToken`
-   *   demands a signed proof-of-key-ownership challenge. May also be provided later via
-   *   {@link setPrivateKey}. Never sent to the API — only used for local signing.
+   * @param privateKey Optional private key, or a {@link Signer} (for example a wallet's, see
+   *   `createWalletSigner`), required to obtain JWTs: `generateToken` demands a signed
+   *   proof-of-key-ownership challenge. May also be provided later via {@link setPrivateKey}
+   *   or {@link setSigner}. A key is never sent to the API — only used for local signing.
    * @param chainId This chain's id (e.g. 2077 for the app's own config), used for the
    *   chain-bound auth challenge and as the default `expected.chainId` pin in
    *   {@link signTransaction}'s `verifyUnsignedTransaction` check. Get this from app config,
@@ -442,7 +475,7 @@ export class ClutchHubSdk {
   constructor(
     apiUrl: string,
     publicKey: string,
-    privateKey?: string,
+    privateKey?: string | Signer,
     chainId?: number,
     options: ClutchHubSdkOptions = {}
   ) {
@@ -454,7 +487,7 @@ export class ClutchHubSdk {
     this.chainId = chainId ?? 0;
     this.chainIdConfigured = chainId !== undefined;
     if (privateKey) {
-      globalPrivateKeys.set(publicKey, privateKey);
+      globalSigners.set(publicKey, toSigner(privateKey));
     }
   }
 
@@ -467,13 +500,18 @@ export class ClutchHubSdk {
   }
 
   /**
-   * Provide (or replace) the private key used to sign `generateToken` auth challenges for
-   * this SDK's public key. Stored in a module-global map keyed by publicKey — like the JWT
-   * cache — so every SDK instance and shared WebSocket connection for this wallet can
-   * authenticate. In-memory only; never sent to the API.
+   * Provide (or replace) the private key — or the {@link Signer} — used to sign `generateToken`
+   * auth challenges for this SDK's public key. Stored in a module-global map keyed by
+   * publicKey — like the JWT cache — so every SDK instance and shared WebSocket connection for
+   * this wallet can authenticate. In-memory only; a key is never sent to the API.
    */
-  public setPrivateKey(privateKey: string): void {
-    globalPrivateKeys.set(this.publicKey, privateKey);
+  public setPrivateKey(privateKey: string | Signer): void {
+    globalSigners.set(this.publicKey, toSigner(privateKey));
+  }
+
+  /** Same as {@link setPrivateKey}, for a signer such as a wallet's (`createWalletSigner`). */
+  public setSigner(signer: Signer): void {
+    globalSigners.set(this.publicKey, signer);
   }
 
   /**
@@ -484,6 +522,17 @@ export class ClutchHubSdk {
     const now = Date.now();
     const bufferTime = 30000; // 30 seconds
     return !!(this.token && now < (this.tokenExpireTime - bufferTime));
+  }
+
+  /**
+   * True when a token for this account is cached and still good, so the next authenticated call
+   * opens no sign-in prompt. `isAuthenticated` looks at this instance only; this looks at the
+   * cache that every instance of the account shares. A poll should check it first: a wallet's
+   * sign-in prompt belongs to something the user did, never to a timer.
+   */
+  public hasValidToken(): boolean {
+    const cached = globalTokenCache.get(this.publicKey);
+    return !!cached && Date.now() < cached.expireTimeMs - 30000;
   }
 
   private get authHeaders(): Record<string, string> {
@@ -513,20 +562,9 @@ export class ClutchHubSdk {
     const key = sharedGraphqlWsCacheKey(base, this.publicKey);
     let entry = sharedGraphqlWsClients.get(key);
     if (!entry) {
-      const pk = this.publicKey;
-      const apiClient = this.apiClient;
-      const chainId = this.chainId;
       const client = createHubSubscriptionClient({
         url: hubGraphqlWsUrl(base),
-        connectionParams: async () => {
-          try {
-            await ensureTokenInCacheForPublicKey(pk, apiClient, chainId);
-          } catch {
-            /* public list subscriptions work without JWT */
-          }
-          const c = globalTokenCache.get(pk);
-          return c?.token ? { Authorization: `Bearer ${c.token}` } : {};
-        },
+        connectionParams: () => this.wsConnectionParams(),
       });
       entry = { client, refcount: 0 };
       sharedGraphqlWsClients.set(key, entry);
@@ -544,6 +582,29 @@ export class ClutchHubSdk {
       }
     };
     return { client: entry.client, release };
+  }
+
+  /**
+   * The `connection_init` payload of the shared socket: a token when there is one to send.
+   *
+   * The subscriptions are public, so a token is optional here. This runs at every connect and
+   * every reconnect (the socket retries for ever), with nobody watching, so a signer that opens a
+   * prompt (a wallet) is not asked for a signature: a token from an earlier, explicit action is
+   * still sent. A key signs silently and is asked as before.
+   */
+  private async wsConnectionParams(): Promise<Record<string, string>> {
+    const pk = this.publicKey;
+    if (!globalSigners.get(pk)?.interactive) {
+      try {
+        await ensureTokenInCacheForPublicKey(pk, this.apiClient, this.chainId);
+      } catch {
+        /* public list subscriptions work without JWT */
+      }
+    }
+    const cached = globalTokenCache.get(pk);
+    return cached?.token && Date.now() < cached.expireTimeMs
+      ? { Authorization: `Bearer ${cached.token}` }
+      : {};
   }
 
   /**
@@ -785,10 +846,14 @@ export class ClutchHubSdk {
 
   /**
    * Signs a transaction and returns the signature and raw RLP-encoded payload.
+   *
+   * `privateKey` is a private key, or a {@link Signer}. A key signs the hash string. A wallet's
+   * signer asks the wallet to sign `clutch-tx:{chainId}:{hash}` with `personal_sign`: the user
+   * sees a prompt, so call this only where that is expected.
    */
   public async signTransaction(
     unsignedTx: UnsignedTransaction,
-    privateKey: string,
+    privateKey: string | Signer,
     expected?: ExpectedTx
   ): Promise<Signature & { rawTransaction: string, txHash: string }> {
     if (expected) {
@@ -835,7 +900,10 @@ export class ClutchHubSdk {
     const rawHashHex = Buffer.from(hashBytes).toString('hex');
 
     // Sign the transaction hash
-    const signature = await signHashHex(rawHashHex, privateKey);
+    const signature = await toSigner(privateKey).signTransaction({
+      hashHex: rawHashHex,
+      chainId: unsignedTx.chain_id,
+    });
     const rNo0x = stripHexPrefix(signature.r);
     const sNo0x = stripHexPrefix(signature.s);
 

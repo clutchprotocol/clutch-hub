@@ -20,7 +20,7 @@ import {
   subscribeRideRequestsCompat,
 } from '../sdkRealtime';
 import TransactionHistory from './TransactionHistory';
-import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 import { pickupIcon, dropoffIcon } from '../utils/mapMarkers';
 import MapLegend from './MapLegend';
 import RouteLine from './RouteLine';
@@ -163,9 +163,7 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
   const [selectedRequestTxHash, setSelectedRequestTxHash] = useState(null);
   const [offerReferrer, setOfferReferrer] = useState(null);
 
-  const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
-
-  const hubSdk = useClutchSdk(userProfile.publicKey || undefined, '0x0', userProfile.privateKey);
+  const hubSdk = useClutchSdk(userProfile.publicKey || undefined, '0x0', userProfile.signer);
   const defaultMapCenter = [27.1883, 56.3772];
 
   const hasActiveTrip = activeTrips.length > 0;
@@ -296,21 +294,16 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
     setAcceptStatus(null);
     setOfferReferrer(null);
     try {
-      // Private key needed before createUnsigned*: generateToken requires a signed challenge.
-      let privateKey = userProfile.privateKey;
-      if (!privateKey) {
-        privateKey = await requestPrivateKey('Enter your private key to sign the ride offer:');
-        if (!privateKey) {
-          setAcceptStatus({ type: 'warning', message: 'Signing cancelled.' });
-          setAcceptingTxHash(null);
-          return;
-        }
-      }
-      hubSdk.setPrivateKey(privateKey);
+      // Creating the unsigned tx authenticates via generateToken, which needs a signed challenge:
+      // the wallet asks for that first when it has not yet, then for the offer itself. A wallet
+      // shows the text it signs, not the ride, so say what it is.
+      const what = `offer this ride for ${formatUsd(offerFare)}`;
+      setAcceptStatus({ type: 'info', message: approveInWalletMessage(what, hubSdk.hasValidToken()) });
       const unsignedTx = await hubSdk.createUnsignedRideOffer({ rideRequestTxHash: req.txHash, fare: offerFare });
       const expected = { type: 'RideOffer', fare: offerFare, refTxHash: req.txHash };
       setOfferReferrer(verifyUnsignedTransaction(unsignedTx, expected).referrer);
-      const signature = await hubSdk.signTransaction(unsignedTx, privateKey, expected);
+      setAcceptStatus({ type: 'info', message: approveInWalletMessage(what) });
+      const signature = await hubSdk.signTransaction(unsignedTx, userProfile.signer, expected);
       await hubSdk.submitTransaction(signature.rawTransaction);
       setAcceptStatus({ type: 'success', message: 'Offer submitted!' });
       setRefreshBalanceCounter((c) => c + 1);
@@ -325,7 +318,7 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
       setTimeout(() => setAcceptStatus(null), 5000);
     } catch (err) {
       console.error(err);
-      setAcceptStatus({ type: 'error', message: 'Failed: ' + (err.message || 'Unknown error') });
+      setAcceptStatus({ type: 'error', message: 'Failed: ' + describeWalletError(err, 'Unknown error') });
       TransactionHistory.addTransaction(userProfile.publicKey, {
         type: 'Offer',
         timestamp: Date.now(),
@@ -337,7 +330,7 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
     } finally {
       setAcceptingTxHash(null);
     }
-  }, [userProfile, offerFares, requestPrivateKey, hubSdk]);
+  }, [userProfile, offerFares, hubSdk]);
 
   const refreshDriverMyTrips = useCallback(async () => {
     if (!userProfile.publicKey) return;
@@ -533,8 +526,6 @@ const DriverView = ({ userProfile, externalTab, onTabSync }) => {
           </>
         )}
       </OverlayPanel>
-
-      <PrivateKeyModal />
     </div>
   );
 };

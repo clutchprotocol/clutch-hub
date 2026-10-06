@@ -1,6 +1,5 @@
 import React from 'react';
-import { WalletBar } from './layout';
-import KeyStorageNotice from './KeyStorageNotice';
+import WalletConnect from './WalletConnect';
 import EnvTag from './EnvTag';
 
 const ROLE_STORAGE_KEY = 'clutch_demo_role';
@@ -15,15 +14,10 @@ export function persistRole(roleId) {
   }
 }
 
-const RoleEntry = ({
-  selectedRole,
-  onSelectRole,
-  userProfile,
-  onProfileUpdate,
-}) => {
-  const title = selectedRole ? 'Select your wallet' : 'Select your account';
+const RoleEntry = ({ selectedRole, onSelectRole, connection }) => {
+  const title = selectedRole ? 'Connect your wallet' : 'Select your account';
   const subtitle = selectedRole
-    ? 'Generate a new account or import an existing wallet.'
+    ? 'Use MetaMask or Trust Wallet.'
     : 'Choose Driver or Passenger. You can switch later from Settings.';
 
   return (
@@ -63,13 +57,21 @@ const RoleEntry = ({
         </div>
       ) : (
         <div className="role-entry-wallet">
-          {/* Before the key exists, not after — see KeyStorageNotice for why here. */}
-          <KeyStorageNotice />
-          <WalletBar
-            role={selectedRole}
-            userProfile={userProfile}
-            onProfileUpdate={onProfileUpdate}
+          <WalletConnect
+            wallets={connection.wallets}
+            searching={connection.searching}
+            connecting={connection.connecting}
+            error={connection.error}
+            onConnect={connection.connect}
+            onSearch={connection.search}
           />
+          <button
+            type="button"
+            className="btn-ghost role-entry-back"
+            onClick={() => onSelectRole(null)}
+          >
+            Choose Driver or Passenger again
+          </button>
         </div>
       )}
     </div>
@@ -77,4 +79,3 @@ const RoleEntry = ({
 };
 
 export default RoleEntry;
-

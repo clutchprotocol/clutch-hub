@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ClutchHubSdk } from 'clutch-hub-sdk-js';
 import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config';
-import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { Row } from './receipt';
 import QrCode from './QrCode';
+import WalletNote from './WalletNote';
 import { formatExactUsdt } from '../utils/money';
 import { depositTerms } from '../utils/depositTerms';
 import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 
 /** `truncHash`/`timeAgo`, copied from `TransactionHistory.jsx` (module-private there, not
  * exported) rather than imported — a few duplicated lines beat coupling this panel to a
@@ -192,8 +193,9 @@ const TestnetFaucetGuide = () => (
  * "Top up with USDT": when the panel opens, fetches this account's permanent TRC-20 deposit address
  * and shows it the way an exchange does — the network, the address as a QR code and as text with Copy
  * and Share, then what to send. Any amount sent there is credited automatically, with no amount,
- * intent, or poll. The private key is needed only to obtain a hub JWT via `sdk.getAuthHeaders()`,
- * not to sign anything.
+ * intent, or poll. The wallet is asked only to sign in to the hub (a JWT via
+ * `sdk.getAuthHeaders()`), not to sign a transaction, and only when the panel opens: the
+ * 10-second refresh never opens a wallet prompt.
  */
 const DepositPanel = ({ userProfile, open }) => {
   const [address, setAddress] = useState(null);
@@ -202,15 +204,15 @@ const DepositPanel = ({ userProfile, open }) => {
   const [unavailable, setUnavailable] = useState(false);
   const [deposits, setDeposits] = useState([]);
   const [terms, setTerms] = useState(null);
-
-  const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
+  // What the wallet's prompt is for, while one is open.
+  const [walletNote, setWalletNote] = useState('');
 
   // Fetches the account's permanent deposit address each time the panel opens — that POST IS the
   // "user is about to deposit" signal the backend uses to mark the address hot. `DepositPanel` is
   // permanently mounted by `OverlayPanel` (hidden via CSS, never unmounted — see App.jsx), so `open`
   // is what actually tracks visibility; without it this would fire for every signed-in user on
   // every app load. `userProfile?.publicKey` additionally guards the case where the panel opens
-  // before a wallet exists (`userProfile` starts as `{publicKey: '', privateKey: ''}`).
+  // before a wallet exists (`userProfile` starts as `{publicKey: '', signer: null}`).
   //
   // The same effect also fetches the caller's recent deposit list and refreshes it on a 10s
   // interval while the panel stays open — a deposit's status moves through confirmed / minting /
@@ -218,7 +220,7 @@ const DepositPanel = ({ userProfile, open }) => {
   // reopening the panel. A failed list refresh is logged and otherwise ignored: it must never
   // clobber the address already on screen.
   useEffect(() => {
-    if (!open || !userProfile?.publicKey) return undefined;
+    if (!open || !userProfile?.publicKey || !userProfile?.signer) return undefined;
 
     let cancelled = false;
     let intervalId = null;
@@ -251,17 +253,14 @@ const DepositPanel = ({ userProfile, open }) => {
       // Deliberately NOT setAddress(null) here: a reopen re-POSTs (same address comes back), and
       // blanking the address first would flash the panel to empty on every reopen.
       try {
-        const { publicKey, privateKey } = userProfile;
-        let pk = privateKey;
-        if (!pk) {
-          pk = await requestPrivateKey('Enter your private key to see your deposit address:');
-          if (!pk) {
-            if (!cancelled) setError('Signing cancelled.');
-            return;
-          }
+        const { publicKey, signer } = userProfile;
+        const sdk = new ClutchHubSdk(API_URL, publicKey, signer, CHAIN_ID);
+        // Opening the panel is the one moment the wallet is asked to sign in (when it has not yet).
+        if (!sdk.hasValidToken()) {
+          setWalletNote(approveInWalletMessage('sign in to Clutch to see your deposit address'));
         }
-        const sdk = new ClutchHubSdk(API_URL, publicKey, pk, CHAIN_ID);
         const authHeaders = await sdk.getAuthHeaders();
+        setWalletNote('');
         const res = await fetch(`${ORCHESTRATOR_BASE_URL}/api/v1/deposits`, {
           method: 'POST',
           headers: authHeaders,
@@ -291,21 +290,31 @@ const DepositPanel = ({ userProfile, open }) => {
         // the private-key-bearing sdk reachable) for the life of the tab.
         if (!cancelled) {
           await fetchDeposits(sdk);
-          if (!cancelled) intervalId = setInterval(() => fetchDeposits(sdk), 10000);
+          // A timer never opens a wallet prompt: once the sign-in has expired the refresh stops
+          // until the panel is opened again.
+          if (!cancelled) {
+            intervalId = setInterval(() => {
+              if (sdk.hasValidToken()) fetchDeposits(sdk);
+            }, 10000);
+          }
         }
       } catch (err) {
         console.error('deposit address fetch failed', err);
-        if (!cancelled) setError(err.message || 'Failed to load deposit address');
+        if (!cancelled) setError(describeWalletError(err, 'Failed to load deposit address'));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setWalletNote('');
+        }
       }
     })();
 
     return () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
+      setWalletNote('');
     };
-  }, [open, userProfile, requestPrivateKey]);
+  }, [open, userProfile]);
 
   return (
     <div className="card deposit-ticket">
@@ -317,6 +326,7 @@ const DepositPanel = ({ userProfile, open }) => {
       </div>
 
       {loading && !address && <p className="deposit-hint">Loading your deposit address…</p>}
+      <WalletNote message={walletNote} />
 
       {!loading && !address && unavailable && (
         <div className="status-banner info">
@@ -409,8 +419,6 @@ const DepositPanel = ({ userProfile, open }) => {
           </ul>
         </div>
       )}
-
-      <PrivateKeyModal />
     </div>
   );
 };

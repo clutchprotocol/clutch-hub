@@ -11,14 +11,14 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { verifyUnsignedTransaction } from 'clutch-hub-sdk-js';
 import { MAP_ATTRIBUTION, MAP_TILE_URL } from '../config';
 import { useClutchSdk } from '../hooks/useClutchSdk';
-import { parseUsdToClt } from '../utils/money';
+import { formatUsd, parseUsdToClt } from '../utils/money';
+import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 import {
   subscribeActiveTripsCompat,
   subscribeRecentTripsCompat,
   subscribeRideRequestsCompat,
 } from '../sdkRealtime';
 import TransactionHistory from './TransactionHistory';
-import { usePrivateKeyRequest } from './layout/usePrivateKeyRequest.jsx';
 import { pickupIcon, dropoffIcon, currentLocationIcon } from '../utils/mapMarkers';
 import MapLegend from './MapLegend';
 import RouteLine from './RouteLine';
@@ -58,9 +58,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
   const [locationError, setLocationError] = useState(null);
   const [sheetSnap, setSheetSnap] = useState('peek');
 
-  const { PrivateKeyModal, requestPrivateKey } = usePrivateKeyRequest();
-
-  const hubSdk = useClutchSdk(userProfile.publicKey, '0x0', userProfile.privateKey);
+  const hubSdk = useClutchSdk(userProfile.publicKey, '0x0', userProfile.signer);
 
   const hasConcurrent = activeTrips.length > 0 || previousRequests.length > 0;
   const hasActiveTrip = activeTrips.length > 0;
@@ -181,25 +179,16 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
     setIsLoading(true);
     setRequestReferrer(null);
     try {
-      // The private key is needed up front: creating the unsigned tx authenticates via
-      // generateToken, which requires a signed proof-of-key-ownership challenge.
-      let privateKey = userProfile.privateKey;
-      if (!privateKey) {
-        privateKey = await requestPrivateKey('Enter your private key to sign the transaction:');
-        if (!privateKey) {
-          setTransactionStatus({ type: 'warning', message: 'Signing cancelled.' });
-          submittingRef.current = false;
-          setIsLoading(false);
-          return;
-        }
-      }
-      hubSdk.setPrivateKey(privateKey);
-      setTransactionStatus({ type: 'info', message: 'Creating transaction...' });
+      // Creating the unsigned tx authenticates via generateToken, which needs a signed
+      // proof-of-key-ownership challenge: the wallet asks for that first when it has not yet, then
+      // for the request itself. A wallet shows the text it signs, not the ride, so say what it is.
+      const what = `request a ride for ${formatUsd(fareClt)}`;
+      setTransactionStatus({ type: 'info', message: approveInWalletMessage(what, hubSdk.hasValidToken()) });
       const unsignedTx = await hubSdk.createUnsignedRideRequest({ pickup, dropoff, fare: fareClt });
       const expected = { type: 'RideRequest', fare: fareClt };
       setRequestReferrer(verifyUnsignedTransaction(unsignedTx, expected).referrer);
-      setTransactionStatus({ type: 'info', message: 'Signing...' });
-      const signature = await hubSdk.signTransaction(unsignedTx, privateKey, expected);
+      setTransactionStatus({ type: 'info', message: approveInWalletMessage(what) });
+      const signature = await hubSdk.signTransaction(unsignedTx, userProfile.signer, expected);
       setTransactionStatus({ type: 'info', message: 'Submitting...' });
       await hubSdk.submitTransaction(signature.rawTransaction);
       TransactionHistory.addTransaction(userProfile.publicKey, {
@@ -223,7 +212,7 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
         status: 'failed',
         error: err.message,
       });
-      setTransactionStatus({ type: 'error', message: 'Failed: ' + (err.message || 'Unknown error') });
+      setTransactionStatus({ type: 'error', message: 'Failed: ' + describeWalletError(err, 'Unknown error') });
     } finally {
       submittingRef.current = false;
       setIsLoading(false);
@@ -510,7 +499,6 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
                     hubSdk={hubSdk}
                     onAcceptSuccess={() => setRefreshBalanceCounter((prev) => prev + 1)}
                     onCancelSuccess={() => setRefreshBalanceCounter((prev) => prev + 1)}
-                    requestPrivateKey={requestPrivateKey}
                   />
                 ))}
               </div>
@@ -557,8 +545,6 @@ const PassengerView = ({ userProfile, externalTab, onTabSync }) => {
           </>
         )}
       </OverlayPanel>
-
-      <PrivateKeyModal />
     </div>
   );
 };

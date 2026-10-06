@@ -29,11 +29,11 @@ Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environ
 
 ## Features
 
-### User Profile Management
-- Generate, import or restore a wallet
-- Option to remember keys between sessions
-- Passphrase-encrypted backup and restore (see [Development](#development))
-- Visual feedback for active profile
+### Connect your wallet
+- Sign in with a wallet you already have: MetaMask or Trust Wallet. The app holds no key
+- On a phone, a link opens the page inside the wallet app; on a computer, a link to install the wallet
+- Remembers which wallet you used, never a key, and connects again on the next visit without a prompt
+- Follows the wallet: switching account in the wallet switches the account in the app
 
 ### Staying current
 - Installable as a PWA, and a new build announces itself rather than arriving unasked
@@ -46,7 +46,7 @@ Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environ
 ### Ride Request
 - Interactive map to select pickup and dropoff locations
 - Simple fare input
-- Automatic transaction signing when keys are stored
+- Your wallet asks you to approve each action, and the app says what each prompt is for
 - Visual feedback during transaction processing
 
 ### Transaction History
@@ -56,16 +56,16 @@ Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environ
 
 ## Security Considerations
 
-- Private keys are optionally stored in the browser's localStorage
-- Warning is displayed about the risks of storing private keys
-- Keys are never transmitted to any server except during transaction signing
+- The app never holds a private key: your wallet keeps it and signs after you approve
+- Nothing that can sign is stored in the browser. Only the id of the wallet you used is remembered
+- A wallet shows the text it signs (`clutch-tx:…`), not the ride, so the app says what each prompt is for before you approve it
 - All blockchain interactions happen client-side
 
 ## Decentralization Benefits
 
 This application demonstrates several key blockchain principles:
 
-1. **User sovereignty**: Users own and control their keys
+1. **User sovereignty**: Users own and control their keys, in their own wallet
 2. **Transparency**: All transactions are recorded and visible
 3. **No central authority**: Ride requests are processed by the blockchain network
 4. **Trustless operations**: Smart contracts enforce the rules without third-party oversight
@@ -105,36 +105,29 @@ Or use [clutch-deploy](https://github.com/clutchprotocol/clutch-deploy) with `--
 - Clutch Hub SDK for blockchain interactions: `packages/sdk` in this repo, used as an npm
   workspace. An SDK change reaches the app without a publish step.
 
-### Local Storage
+### Wallets, and what is stored
 
-> **This is a demo, not a wallet.** Keys are generated in the browser and stored in
-> `localStorage` **in plain text** — readable by any script on the page, any browser extension,
-> and anyone else using the same computer. Clearing site data deletes them irrecoverably. That is
-> an acceptable trade for a testnet whose CLT has no value, and it is not acceptable for anything
-> else. Never put real funds behind a key created here.
->
-> **If you are building on Clutch, do not copy this pattern.** The SDK signs locally, so a
-> hardware wallet, an OS keychain or an external signer substitutes in without changing how
-> transactions are built or submitted. See
-> [Mainnet Readiness](https://docs.clutchprotocol.io/reference/mainnet-readiness) item F1.
+The app holds no key. Until 2026-10-06 it generated one in the browser and stored it in
+`localStorage` in plain text, with a backup file. That is gone, on the testnet too: the person's
+own wallet keeps the key and signs. The SDK takes a signer where it used to take a key, so a
+hardware wallet or an external signer substitutes in the same way. See
+[Mainnet Readiness](https://docs.clutchprotocol.io/reference/mainnet-readiness) item F1.
 
-Keys are role-scoped, so a passenger and a driver on the same browser are separate accounts:
+What the app stores in `localStorage`:
 
-- `clutch_{passenger|driver}_publicKey` — the account address
-- `clutch_{passenger|driver}_privateKey` — the private key, in plain text
+- `clutch_wallet_id` — which wallet was used last (for example `io.metamask`), so that the next visit connects without a prompt
 - `clutch_demo_role` — which role was last used
   (`clutch_demo_theme` is gone: the app has one palette since dark mode was removed on 2026-09-14, so any value left over from an older build is inert)
 - `clutch_tx_{publicKey}` — the last ~10 local transaction records, for the history panel
 
-Because that storage is lost by clearing site data, changing browser or changing machine, the app can write a **passphrase-encrypted backup** — PBKDF2-SHA256 then AES-GCM, both from the browser's own WebCrypto, no library. Export is in the menu while connected; restore is on the sign-in screen when you are not. Deliberately not a plaintext key file: this is the reference app, and the storage pattern people copy out of it should be one worth copying.
+The first time the app starts after this change it deletes the `clutch_{passenger|driver}_{publicKey|privateKey}` entries that older versions left behind.
 
-Restoring re-derives the address from the decrypted key and refuses a file whose `address` field disagrees — that field sits outside the sealed envelope, so anyone can edit it, and without the check a backup could name an address whose key it does not hold.
+Not built yet: WalletConnect (a phone wallet that scans a code shown on a computer).
 
 ## Best Practices
 
 The application follows blockchain best practices:
-- Minimizes private key exposure
-- Uses client-side signing
+- Never holds a private key: a wallet signs each action after you approve it
 - Keeps transaction history for transparency
 - Provides clear feedback on transaction status
 

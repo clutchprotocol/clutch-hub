@@ -1,4 +1,5 @@
-/* ===== Private key modal (anti-prompt UX) ===== */
+/* ===== Dialogs: the confirm dialog (components/layout/useConfirmDialog.jsx). The class names say
+   "pk-modal" because it began as the private-key modal, which is gone. ===== */
 .pk-modal-overlay {
   position: fixed;
   inset: 0;
