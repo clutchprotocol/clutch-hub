@@ -60,20 +60,18 @@ export function removeLegacyKeys(storage) {
   }
 }
 
-/** The first account of an `eth_accounts` or `accountsChanged` answer, in lower case; '' when there is none. */
-export function firstAccount(accounts) {
-  const first = Array.isArray(accounts) ? accounts[0] : undefined;
-  return typeof first === 'string' && /^0x[0-9a-fA-F]{40}$/.test(first) ? first.toLowerCase() : '';
-}
+const SAID_NO = 'You said no in your wallet, so nothing was sent.';
 
 /**
- * Plain words for what went wrong in a wallet. The codes are EIP-1193's. Anything else keeps its
- * own message, which the SDK and the hub write for people; `fallback` is for an error with none.
+ * Plain words for what went wrong in a wallet. The codes are EIP-1193's. TronLink says no to a
+ * signature with an error that has a message ("user rejected request") and no code. Anything else
+ * keeps its own message, which the SDK and the hub write for people; `fallback` is for an error
+ * with none.
  */
 export function describeWalletError(error, fallback = 'Something went wrong with your wallet.') {
   switch (error?.code) {
     case 4001:
-      return 'You said no in your wallet, so nothing was sent.';
+      return SAID_NO;
     case -32002:
       return 'Your wallet already has a request open. Open your wallet, finish or reject it, then try again.';
     case 4100:
@@ -82,7 +80,7 @@ export function describeWalletError(error, fallback = 'Something went wrong with
     case 4901:
       return 'Your wallet is not connected. Open it and try again.';
     default:
-      return error?.message || fallback;
+      return /^user rejected (the )?request/i.test(error?.message ?? '') ? SAID_NO : error?.message || fallback;
   }
 }
 
@@ -98,10 +96,13 @@ export function isMobileUserAgent(userAgent) {
 /**
  * Where to get a wallet. On a phone the best help is to open this same page inside the wallet's own
  * browser, where the wallet is already present; on a computer it is to install the extension.
+ * TronLink's phone link is its deep link `tronlinkoutside://pull.activity?param={…}` with the
+ * request as URL-encoded JSON (TronLink documentation, "DeepLink", action `open`).
  */
 export function walletHelpLinks({ href, mobile }) {
   if (mobile) {
     const withoutScheme = String(href).replace(/^https?:\/\//, '');
+    const tronlinkRequest = { url: String(href), action: 'open', protocol: 'TronLink', version: '1.0' };
     return [
       { id: 'metamask', label: 'Open in MetaMask', url: `https://metamask.app.link/dapp/${withoutScheme}` },
       {
@@ -109,10 +110,16 @@ export function walletHelpLinks({ href, mobile }) {
         label: 'Open in Trust Wallet',
         url: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(href)}`,
       },
+      {
+        id: 'tronlink',
+        label: 'Open in TronLink',
+        url: `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify(tronlinkRequest))}`,
+      },
     ];
   }
   return [
     { id: 'metamask', label: 'Get MetaMask', url: 'https://metamask.io/download/' },
     { id: 'trust', label: 'Get Trust Wallet', url: 'https://trustwallet.com/download' },
+    { id: 'tronlink', label: 'Get TronLink', url: 'https://www.tronlink.org/' },
   ];
 }

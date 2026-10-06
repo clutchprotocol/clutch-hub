@@ -17,8 +17,10 @@ Only five source files — the SDK is deliberately small:
   template strings. Also exports `stripHexPrefix`, `normalizeTxHashForRlp`,
   `UnsignedTransaction`, `createLocalSigner`, `addressFromPrivateKey`.
 - `src/signers.ts` — the `Signer` interface and the wallet side of it (added 2026-10-06):
-  `createWalletSigner` (EIP-1193 `personal_sign`), `discoverInjectedWallets` (EIP-6963, then
-  `window.ethereum`), `connectWallet`, `walletTransactionText`, `personalSignDigest`. It must not
+  `createWalletSigner` (EIP-1193 `personal_sign`), `createTronLinkSigner` (TronLink `signMessageV2`),
+  `discoverInjectedWallets` (EIP-6963 and TIP-6963, then `window.ethereum` / `window.tron`),
+  `connectWallet`, `createSignerFor`, `sharedWalletAccount`, `watchWalletAccounts`,
+  `walletTransactionText`, `personalSignDigest`, `tronSignDigest`, `tronAddressToHex`. It must not
   import `sdk.ts` (`sdk.ts` imports it); that is why `stripHexPrefix` has a private copy there.
 - `src/subscriptions.ts` — `hubGraphqlWsUrl()` (HTTP base URL → `ws(s)://…/graphql/ws`),
   `createHubSubscriptionClient()` (graphql-ws client: `lazy: false`, infinite retry, 10s keepAlive),
@@ -52,8 +54,26 @@ signAuthChallenge({message, hashHex}) }`; the SDK keeps one per account in a mod
   is lifted from 0/1 to 27/28; the account is lowercased (the hash commits to `from`, and the node
   reads it in lower case); the signature is recovered locally and refused if it is from another
   account than the one asked (the user switched accounts).
-- `test/signers.test.mjs` uses a fake wallet written from the standard (not from the SDK), and pins
-  two signatures that the Rust tests of the node and the Hub API pin too.
+- **TronLink** (`createTronLinkSigner(provider, address)`, added 2026-10-06): TronLink signs with
+  `tronWeb.trx.signMessageV2` (TIP-191), which hashes `"\x19TRON Signed Message:\n" + length + text`
+  (TronWeb's `message.js`). The key, the curve, Keccak-256 and the 20 address bytes are the same as
+  an Ethereum key, so the Clutch address of a TronLink account is its base58 `T…` address decoded
+  (`tronAddressToHex`, checksum checked): `0x41` + 20 bytes + 4 bytes of checksum. The texts are the
+  same two as for `personal_sign`. Quirks, all from TronLink's documentation, which is not clear in
+  one place: discovery is TIP-6963 (`TIP6963:announceProvider`, `rdns org.tronlink.www`) or
+  `window.tron` (older `window.tronLink`); connect is `eth_requestAccounts` answering `['T…']`
+  (an older TronLink answers 4200 and has `tron_requestAccounts` instead); `provider.tronWeb` is
+  `false` until the site is allowed, so `sharedWalletAccount` reads it for the no-prompt reconnect;
+  `signMessageV2` rejects with `Error("user rejected request")` and no code. **What `signMessageV2`
+  takes is unclear**: one page says a hex string, another says plain text or hex. The SDK sends the
+  text plain first; a TronLink that answers "Invalid transaction provided" before a prompt gets the
+  `0x` hex of the UTF-8 text; any other error ends the call (a second try would open a second
+  prompt). The signature is recovered here with the TRON digest and refused if it is not the
+  account's; a TronLink that signed the hex as text is named in the error (`signed the hex text`).
+  This has not been tried against a real TronLink: the tests use a fake written from its docs.
+- `test/signers.test.mjs` uses fake wallets written from the standards (not from the SDK), and pins
+  signatures that the Rust tests of the node and the Hub API pin too: two made by `@noble/secp256k1`
+  (`personal_sign`) and two made by TronWeb 6.5.1 itself (`signMessageV2`).
 
 ## Transaction Lifecycle (client side)
 

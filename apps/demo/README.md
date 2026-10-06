@@ -30,7 +30,7 @@ Stage auto-detection: `app-stage.*` hostname maps to `api-stage.*`. See [Environ
 ## Features
 
 ### Connect your wallet
-- Sign in with a wallet you already have: MetaMask or Trust Wallet. The app holds no key
+- Sign in with a wallet you already have: MetaMask, Trust Wallet or TronLink. The app holds no key
 - On a phone, a link opens the page inside the wallet app; on a computer, a link to install the wallet
 - Remembers which wallet you used, never a key, and connects again on the next visit without a prompt
 - Follows the wallet: switching account in the wallet switches the account in the app

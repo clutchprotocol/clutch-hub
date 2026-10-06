@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   approveInWalletMessage,
   describeWalletError,
-  firstAccount,
   forgetWalletId,
   isMobileUserAgent,
   recallWalletId,
@@ -69,18 +68,12 @@ test('the private keys of an older version are deleted, and nothing else is', ()
   assert.deepEqual([...storage.items.keys()].sort(), ['clutch_demo_role', 'clutch_tx_0xaaa', 'clutch_wallet_id']);
 });
 
-test('firstAccount gives a lower-case address, or nothing', () => {
-  assert.equal(firstAccount(['0xDEB4cfb63db134698e1879ea24904df074726cc0']), '0xdeb4cfb63db134698e1879ea24904df074726cc0');
-  assert.equal(firstAccount([]), '');
-  assert.equal(firstAccount(undefined), '');
-  assert.equal(firstAccount(null), '');
-  assert.equal(firstAccount(['not an address']), '');
-  assert.equal(firstAccount([42]), '');
-  assert.equal(firstAccount('0xdeb4cfb63db134698e1879ea24904df074726cc0'), '', 'a bare string is not a list of accounts');
-});
-
 test('wallet errors are put in plain words', () => {
   assert.match(describeWalletError({ code: 4001 }), /said no/);
+  // TronLink says no to a signature with a message and no code.
+  assert.match(describeWalletError(new Error('user rejected request')), /said no/);
+  assert.match(describeWalletError(new Error('User rejected the request.')), /said no/);
+  assert.match(describeWalletError(new Error('the user rejected request, but this is not at the start')), /not at the start/);
   assert.match(describeWalletError({ code: -32002 }), /already has a request open/);
   assert.match(describeWalletError({ code: 4100 }), /has not shared this account/);
   assert.match(describeWalletError({ code: 4900 }), /not connected/);
@@ -109,7 +102,7 @@ test('a phone is told by its user agent', () => {
 
 test('on a phone the help opens this page inside the wallet app', () => {
   const links = walletHelpLinks({ href: 'https://app.clutchprotocol.io/?x=1', mobile: true });
-  assert.deepEqual(links, [
+  assert.deepEqual(links.slice(0, 2), [
     { id: 'metamask', label: 'Open in MetaMask', url: 'https://metamask.app.link/dapp/app.clutchprotocol.io/?x=1' },
     {
       id: 'trust',
@@ -119,10 +112,27 @@ test('on a phone the help opens this page inside the wallet app', () => {
   ]);
 });
 
+test('on a phone the TronLink link is its deep link, with the request as URL-encoded JSON', () => {
+  const links = walletHelpLinks({ href: 'https://app.clutchprotocol.io/?x=1', mobile: true });
+  const tronlink = links.find((link) => link.id === 'tronlink');
+  assert.equal(tronlink.label, 'Open in TronLink');
+  const [scheme, param] = tronlink.url.split('?param=');
+  assert.equal(scheme, 'tronlinkoutside://pull.activity');
+  // The format of TronLink's documentation ("DeepLink", Open DApp): url, action "open", protocol, version.
+  assert.deepEqual(JSON.parse(decodeURIComponent(param)), {
+    url: 'https://app.clutchprotocol.io/?x=1',
+    action: 'open',
+    protocol: 'TronLink',
+    version: '1.0',
+  });
+  assert.ok(!/[{}"]/.test(param), 'the JSON is URL-encoded, so no brace or quote is left in the link');
+});
+
 test('on a computer the help is where to get the wallet', () => {
   const links = walletHelpLinks({ href: 'https://app.clutchprotocol.io/', mobile: false });
   assert.deepEqual(links.map((link) => [link.id, link.url]), [
     ['metamask', 'https://metamask.io/download/'],
     ['trust', 'https://trustwallet.com/download'],
+    ['tronlink', 'https://www.tronlink.org/'],
   ]);
 });

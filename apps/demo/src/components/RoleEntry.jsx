@@ -17,7 +17,7 @@ export function persistRole(roleId) {
 const RoleEntry = ({ selectedRole, onSelectRole, connection }) => {
   const title = selectedRole ? 'Connect your wallet' : 'Select your account';
   const subtitle = selectedRole
-    ? 'Use MetaMask or Trust Wallet.'
+    ? 'Use MetaMask, Trust Wallet or TronLink.'
     : 'Choose Driver or Passenger. You can switch later from Settings.';
 
   return (

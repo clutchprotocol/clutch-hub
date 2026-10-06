@@ -5,9 +5,11 @@ import { isMobileUserAgent, walletHelpLinks } from '../utils/walletSession';
  * "Connect your wallet": the one way into the app.
  *
  * This replaced the screen that made a key in the browser (2026-10-06). The app holds no key now:
- * the person's own wallet (MetaMask, Trust Wallet) keeps it and signs each action after asking. So
- * this screen lists the wallets it finds, and when it finds none it says where to get one, with a
- * link that opens this page inside the wallet app on a phone (where most riders are).
+ * the person's own wallet (MetaMask, Trust Wallet, TronLink) keeps it and signs each action after
+ * asking. So this screen lists the wallets it finds, and when it finds none it says where to get
+ * one, with a link that opens this page inside the wallet app on a phone (where most riders are).
+ * A TronLink account is the same key as a Clutch account, so its entry carries a "TRON" tag, and a
+ * note says that TronLink's `T…` address and the app's `0x…` address are one account.
  */
 const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSearch }) => {
   const mobile = isMobileUserAgent(window.navigator.userAgent);
@@ -39,7 +41,10 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
               ) : (
                 <span className="wallet-connect-icon wallet-connect-icon--blank" aria-hidden="true" />
               )}
-              <span className="wallet-connect-name">{wallet.name}</span>
+              <span className="wallet-connect-name">
+                {wallet.name}
+                {wallet.kind === 'tron' && <span className="wallet-connect-kind">TRON</span>}
+              </span>
               <span className="wallet-connect-go">{connecting ? 'Check your wallet…' : 'Connect'}</span>
             </button>
           ))}
@@ -50,7 +55,7 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
         <div className="status-banner info wallet-connect-help" role="note">
           <strong>No wallet found in this browser.</strong>
           <span>
-            Use MetaMask or Trust Wallet.{' '}
+            Use MetaMask, Trust Wallet or TronLink.{' '}
             {mobile
               ? 'Open this page inside the wallet app:'
               : 'Install one, then come back and look again:'}
@@ -79,6 +84,13 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
         For each action your wallet shows a short text that starts with <code>clutch-</code>. The
         app tells you what that action is before you approve it.
       </p>
+
+      {wallets.some((wallet) => wallet.kind === 'tron') && (
+        <p className="wallet-connect-note">
+          TronLink shows your address as <code>T…</code>. This app shows the same account as{' '}
+          <code>0x…</code>.
+        </p>
+      )}
     </div>
   );
 };
