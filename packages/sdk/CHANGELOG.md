@@ -1,3 +1,10 @@
+## [4.4.2](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.1...v4.4.2) (2026-10-08)
+
+
+### Bug Fixes
+
+* **sdk:** connect TronLink with tron_requestAccounts ([795a1f6](https://github.com/clutchprotocol/clutch-hub/commit/795a1f6d3dbbccd07e49674a34099eed84cdcffe))
+
 ## [4.4.1](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.0...v4.4.1) (2026-10-06)
 
 ## [4.4.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.3.0...v4.4.0) (2026-10-06)
