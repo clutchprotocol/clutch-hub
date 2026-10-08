@@ -473,16 +473,15 @@ const isHexString = (text) => /^0x(?:[0-9a-fA-F]{2})*$/.test(text);
  *   'plain-or-hex'  plain text is signed as UTF-8; a 0x hex string is decoded and its bytes are signed
  *   'hex-only'      plain text is refused with "Invalid transaction provided"; a hex string is decoded
  *   'hex-as-text'   plain text is refused like that, and a hex string is signed as the TEXT of the string
- * `eth_requestAccounts` is the Ethereum chooser: it answers the key's `0x` account and lets the site
- * in on nothing (what the app-stage popup showed on 2026-10-08). `tron_requestAccounts` is the TRON
- * connect; `legacy` is an older TronLink that does not know it (error 4200). `tronWeb` is `false`
- * until the person lets the site in, as the documentation says.
+ * `eth_requestAccounts` is the documented authorization: the person approves the site, the answer is
+ * the key's `0x` account (the Ethereum chooser showed that on app-stage, 2026-10-08, and the app does
+ * not read it), and `tronWeb` then holds the TRON account. `tron_requestAccounts` is the legacy
+ * method, which this provider answers 4200. `tronWeb` is `false` until the person lets the site in.
  */
 function fakeTronLink({
   key = DEV_KEY,
   account = DEV_BASE58,
   style = 'plain-or-hex',
-  legacy = false,
   authorized = false,
   rejectConnect = false,
   rejectSign = false,
@@ -518,15 +517,11 @@ function fakeTronLink({
       requests.push(method);
       if (method === 'eth_requestAccounts') {
         if (rejectConnect) throw Object.assign(new Error('User rejected the request.'), { code: 4001 });
+        provider.tronWeb = tronWeb;
         return [tronAddressToHex(account)];
       }
-      if (method === 'tron_requestAccounts' && legacy) {
-        throw Object.assign(new Error('Method not supported'), { code: 4200 });
-      }
       if (method === 'tron_requestAccounts') {
-        if (rejectConnect) return { code: 4001, message: 'rejected' };
-        provider.tronWeb = tronWeb;
-        return { code: 200, message: 'ok' };
+        throw Object.assign(new Error('Method not supported'), { code: 4200 });
       }
       throw new Error(`unsupported method ${method}`);
     },
@@ -672,31 +667,49 @@ test('connectWallet with TronLink returns a signer for the account, in the Clutc
   const tron = fakeTronLink();
   const signer = await connectWallet(tronWallet(tron));
   assert.equal(signer.address, DEV_ADDRESS);
-  // The TRON connect only: the Ethereum request answers a 0x account, which is not a TRON account.
-  assert.deepEqual(tron.requests, ['tron_requestAccounts']);
+  // The documented authorization. tron_requestAccounts is the legacy method, which this provider refuses.
+  assert.deepEqual(tron.requests, ['eth_requestAccounts']);
   // The connection opened the site to TronLink's tronWeb, so the signer can sign now.
   assert.deepEqual(await signer.signTransaction({ hashHex: TX_HASH, chainId: 1000 }), TRONWEB_TX_SIGNATURE);
 });
 
-test('connectWallet with TronLink never takes the 0x account of the Ethereum chooser', async () => {
+test('connectWallet with TronLink takes the account from tronWeb, not from the 0x answer', async () => {
+  // The answer to eth_requestAccounts is an Ethereum account; the TRON address is tronWeb's.
+  const other = '0x1111111111111111111111111111111111111111';
   const tron = fakeTronLink();
-  await connectWallet(tronWallet(tron));
-  assert.equal(tron.requests.includes('eth_requestAccounts'), false);
+  const provider = {
+    request: async (args) => {
+      const answer = await tron.request(args);
+      return args.method === 'eth_requestAccounts' ? [other] : answer;
+    },
+    get tronWeb() {
+      return tron.tronWeb;
+    },
+  };
+  const signer = await connectWallet(tronWallet(provider));
+  assert.equal(signer.address, DEV_ADDRESS);
 });
 
 test('connectWallet with TronLink passes the refusal on, with the code a person can read', async () => {
   await assert.rejects(connectWallet(tronWallet(fakeTronLink({ rejectConnect: true }))), { code: 4001 });
 });
 
-test('connectWallet with an older TronLink that has no TRON connect says to update it', async () => {
-  await assert.rejects(connectWallet(tronWallet(fakeTronLink({ legacy: true }))), /update TronLink/);
+test('connectWallet with a TronLink that has no authorization method says to update it', async () => {
+  const provider = {
+    request: async () => {
+      throw Object.assign(new Error('Method not supported'), { code: 4200 });
+    },
+  };
+  await assert.rejects(connectWallet(tronWallet(provider)), /update TronLink/);
 });
 
-test('connectWallet with TronLink that is locked says so', async () => {
+test('connectWallet with TronLink that has not let the site in says so', async () => {
+  // The approval came back, but tronWeb is still false: TronLink is locked, or the site was not allowed.
   const provider = {
-    request: async () => '', // TronLink answers an empty string when it is locked
+    request: async () => [],
+    tronWeb: false,
   };
-  await assert.rejects(connectWallet(tronWallet(provider)), /locked/);
+  await assert.rejects(connectWallet(tronWallet(provider)), /not let this site in/);
 });
 
 test('connectWallet refuses a TronLink answer with no TRON account', async () => {
