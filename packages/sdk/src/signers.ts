@@ -394,31 +394,32 @@ function evmAccountOf(raw: unknown): string | null {
 }
 
 /**
- * Ask TronLink to share its account. TronLink answers `['T…']` (base58). An older TronLink does not
- * know `eth_requestAccounts` (error 4200): it has its own `tron_requestAccounts`, which answers
- * `{ code, message }` and puts the account in `tronWeb`.
+ * Ask TronLink to share its TRON account. `tron_requestAccounts` is TronLink's own request: it
+ * answers `{ code, message }` and puts the account in `tronWeb`. Not `eth_requestAccounts`: that
+ * is the Ethereum network's request, which opens TronLink's Ethereum chooser and answers a `0x`
+ * account, which is not a TRON account (seen on app-stage, 2026-10-08). A TronLink that does not
+ * know `tron_requestAccounts` (error 4200) is too old to connect here.
  */
 async function requestTronAccount(provider: TronLinkProvider): Promise<string | null> {
-  let accounts: unknown;
+  let answer: { code?: number; message?: string } | '' | null;
   try {
-    accounts = await provider.request({ method: 'eth_requestAccounts' });
+    answer = (await provider.request({ method: 'tron_requestAccounts' })) as { code?: number; message?: string } | '' | null;
   } catch (error) {
-    if ((error as { code?: number } | null)?.code !== 4200) {
-      throw error;
+    if ((error as { code?: number } | null)?.code === 4200) {
+      throw new Error('TronLink is too old for this site: update TronLink');
     }
-    const answer = (await provider.request({ method: 'tron_requestAccounts' })) as { code?: number; message?: string } | '' | null;
-    if (!answer) {
-      throw new Error('TronLink is locked: unlock it and try again');
-    }
-    if (answer.code === 4001) {
-      throw Object.assign(new Error('You said no in TronLink.'), { code: 4001 });
-    }
-    if (answer.code !== 200) {
-      throw new Error(answer.message || 'TronLink did not connect');
-    }
-    accounts = [provider.tronWeb ? provider.tronWeb.defaultAddress?.base58 : undefined];
+    throw error;
   }
-  return tronAccountOf(Array.isArray(accounts) ? accounts[0] : undefined);
+  if (!answer) {
+    throw new Error('TronLink is locked: unlock it and try again');
+  }
+  if (answer.code === 4001) {
+    throw Object.assign(new Error('You said no in TronLink.'), { code: 4001 });
+  }
+  if (answer.code !== 200) {
+    throw new Error(answer.message || 'TronLink did not connect');
+  }
+  return tronAccountOf(provider.tronWeb ? provider.tronWeb.defaultAddress?.base58 : undefined);
 }
 
 /**
