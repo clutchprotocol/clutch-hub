@@ -111,6 +111,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_URL=http://localhost:3000
+            VITE_WALLETCONNECT_PROJECT_ID=${{ vars.WALLETCONNECT_PROJECT_ID }}
 
       - name: Image digest
         if: github.event_name != 'pull_request'

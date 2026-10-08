@@ -56,9 +56,26 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
+        // The WalletConnect library (about 1.4 MB) loads only when a person picks WalletConnect, so the
+        // service worker must not download it on install. See build.rollupOptions below.
+        globIgnores: ['**/node_modules/**/*', '**/walletconnect-*.js'],
       },
     }),
   ],
+  build: {
+    modulePreload: {
+      // Vite would otherwise preload the WalletConnect chunk on every page load (see manualChunks below).
+      resolveDependencies: (filename, deps) => deps.filter((dep) => !dep.includes('walletconnect-')),
+    },
+    rollupOptions: {
+      output: {
+        // One lazy chunk for the WalletConnect library and its UI, named so that globIgnores can match it.
+        manualChunks(id) {
+          if (/[\\/]node_modules[\\/](@walletconnect|@reown)[\\/]/.test(id)) return 'walletconnect';
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       // Always use repo SDK + fresh dist (avoids stale Vite pre-bundle of an old version)

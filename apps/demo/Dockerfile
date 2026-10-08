@@ -25,6 +25,9 @@ RUN npm run build --workspace=clutch-hub-sdk-js
 
 ARG VITE_API_URL=http://localhost:3000
 ENV VITE_API_URL=$VITE_API_URL
+# Empty hides the WalletConnect option (see src/config.js).
+ARG VITE_WALLETCONNECT_PROJECT_ID=
+ENV VITE_WALLETCONNECT_PROJECT_ID=$VITE_WALLETCONNECT_PROJECT_ID
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build --workspace=clutch-hub-demo-app
 

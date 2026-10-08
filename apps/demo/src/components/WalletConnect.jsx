@@ -51,7 +51,7 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
         </div>
       )}
 
-      {!searching && wallets.length === 0 && (
+      {!searching && !wallets.some((wallet) => !wallet.lazy) && (
         <div className="status-banner info wallet-connect-help" role="note">
           <strong>No wallet found in this browser.</strong>
           <span>
