@@ -105,6 +105,15 @@ export const EXPLORER_URL =
  */
 const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY;
 
+/**
+ * WalletConnect Cloud project ID: the "WalletConnect" option, for a phone wallet that approves the
+ * connection in its own app. Empty hides the option. It is set when the image is built
+ * (VITE_WALLETCONNECT_PROJECT_ID, from the repository variable WALLETCONNECT_PROJECT_ID in
+ * docker-publish.yml). It is not a secret, since it is visible in the page, so WalletConnect Cloud
+ * limits which domains may use it.
+ */
+export const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '';
+
 const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 

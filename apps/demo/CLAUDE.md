@@ -13,6 +13,7 @@ Reference passenger/driver UI for Clutch Protocol. React 19 + Vite 6 + react-lea
 
 Env vars (Vite, must be prefixed `VITE_`):
 - `VITE_API_URL` — Hub API base (default `http://localhost:3000`). Overridden at runtime by hostname sniffing in `src/config.js`: `app-stage.*` → `api-stage.*` (and legacy `stageweb.*`/port-81 mappings) win over the env var.
+- `VITE_WALLETCONNECT_PROJECT_ID` — WalletConnect Cloud project ID (`src/config.js` → `WALLETCONNECT_PROJECT_ID`). Empty hides the WalletConnect option. Set at image build time: `docker-publish.yml` passes the repository variable `WALLETCONNECT_PROJECT_ID` as a build arg. Not a secret (it is in the page), but WalletConnect Cloud limits which domains may use it.
 
 ## Source layout (`src/`)
 
@@ -65,7 +66,8 @@ Env vars (Vite, must be prefixed `VITE_`):
 - A wallet that says no (code 4001), has a prompt open already (-32002) or signs with another account gives an error that `describeWalletError` turns into words. A handler's `catch` should use it.
 - The only thing remembered about a wallet is its id (`clutch_wallet_id`), so that the next visit connects again without a prompt (`sharedWalletAccount`: `eth_accounts` for MetaMask and Trust Wallet, which never opens one, and TronLink's ready `tronWeb` for TronLink). Other localStorage keys: `clutch_demo_role`, `clutch_tx_<publicKey>` (last ~10 local tx records), the withdraw record (`utils/redemption.js`).
 - "Disconnect wallet" in the menu forgets the wallet in this app. The wallet keeps its own list of connected sites; the person removes the site there.
-- Not built yet: WalletConnect (a phone wallet scanning a code on a computer), and readable typed data (EIP-712) so that the wallet shows the ride instead of the code.
+- **WalletConnect v2** (`src/utils/walletConnect.js`, `@walletconnect/ethereum-provider` pinned at 2.25.0): the way in for a phone wallet, which approves the connection in its own app (QR code or deep link from the library's modal). It is listed only when the build has `VITE_WALLETCONNECT_PROJECT_ID`. The library is a separate chunk (`walletconnect-*.js`, about 1.7 MB) that loads when the person picks the option; `vite.config.js` keeps it out of the service worker's precache and out of the page's modulepreloads. `eth_requestAccounts` is mapped to the library's `enable()` (the SDK asks for accounts before there is a session). The reconnect on the next visit loads the library only when the wallet remembered is WalletConnect. Not tested with a real phone wallet yet.
+- Not built yet: readable typed data (EIP-712) so that the wallet shows the ride instead of the code.
 
 ## Gotchas / conventions
 

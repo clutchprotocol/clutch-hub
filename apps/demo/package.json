@@ -13,6 +13,7 @@
     "check:sdk": "npm list clutch-hub-sdk-js"
   },
   "dependencies": {
+    "@walletconnect/ethereum-provider": "2.25.0",
     "clutch-hub-sdk-js": "*",
     "leaflet": "^1.9.4",
     "react": "^19.1.0",

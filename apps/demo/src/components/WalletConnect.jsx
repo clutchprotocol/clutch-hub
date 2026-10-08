@@ -22,6 +22,12 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
         action.
       </p>
 
+      <p className="wallet-connect-note">
+        Keep the recovery phrase that your wallet showed you when you created it, written down and
+        safe. It is the way back to this account if the wallet is lost or replaced. If the phrase is
+        lost, nobody can recover the account for you, Clutch included.
+      </p>
+
       {searching && wallets.length === 0 && (
         <p className="wallet-connect-status" role="status">Looking for your wallet…</p>
       )}
@@ -51,7 +57,7 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
         </div>
       )}
 
-      {!searching && wallets.length === 0 && (
+      {!searching && !wallets.some((wallet) => !wallet.lazy) && (
         <div className="status-banner info wallet-connect-help" role="note">
           <strong>No wallet found in this browser.</strong>
           <span>

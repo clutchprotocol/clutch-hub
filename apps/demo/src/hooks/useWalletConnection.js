@@ -6,12 +6,14 @@ import {
   sharedWalletAccount,
   watchWalletAccounts,
 } from 'clutch-hub-sdk-js';
+import { WALLETCONNECT_PROJECT_ID } from '../config';
 import {
   describeWalletError,
   forgetWalletId,
   recallWalletId,
   rememberWalletId,
 } from '../utils/walletSession';
+import { attachWalletProvider, endWalletSession, walletConnectEntry } from '../utils/walletConnect';
 
 /** What the rest of the app reads as "who is signed in": an address and the signer behind it. */
 const NO_PROFILE = Object.freeze({ publicKey: '', signer: null });
@@ -49,7 +51,10 @@ export function useWalletConnection() {
   const search = useCallback(async () => {
     setSearching(true);
     try {
-      const found = await discoverInjectedWallets();
+      // A WalletConnect entry (when the build has a project ID) is listed beside the injected wallets.
+      // Its library loads only when the person picks it.
+      const entry = walletConnectEntry(WALLETCONNECT_PROJECT_ID);
+      const found = [...(await discoverInjectedWallets()), ...(entry ? [entry] : [])];
       setWallets(found);
       return found;
     } finally {
@@ -57,18 +62,22 @@ export function useWalletConnection() {
     }
   }, []);
 
+  const connectedWallet = connected?.wallet ?? null;
+
   const disconnect = useCallback(() => {
+    endWalletSession(connectedWallet); // ends the WalletConnect session on the phone, if there is one
     forgetWalletId();
     setConnected(null);
     setError('');
-  }, []);
+  }, [connectedWallet]);
 
   const connect = useCallback(async (wallet) => {
     setError('');
     setConnecting(true);
     try {
-      const signer = await connectWallet(wallet);
-      setConnected({ wallet, profile: { publicKey: signer.address, signer } });
+      const target = await attachWalletProvider(wallet, WALLETCONNECT_PROJECT_ID);
+      const signer = await connectWallet(target);
+      setConnected({ wallet: target, profile: { publicKey: signer.address, signer } });
       rememberWalletId(wallet.id);
     } catch (err) {
       setError(describeWalletError(err));
@@ -87,9 +96,10 @@ export function useWalletConnection() {
       const wallet = found.find((candidate) => candidate.id === remembered);
       if (!wallet) return;
       try {
-        const account = await sharedWalletAccount(wallet);
+        const target = await attachWalletProvider(wallet, WALLETCONNECT_PROJECT_ID);
+        const account = await sharedWalletAccount(target);
         if (account && !cancelled) {
-          setConnected({ wallet, profile: profileFor(wallet, account) });
+          setConnected({ wallet: target, profile: profileFor(target, account) });
         }
       } catch {
         // The wallet would not say: the person connects by hand.
@@ -101,7 +111,6 @@ export function useWalletConnection() {
   }, [search]);
 
   // Follow the wallet while it is connected.
-  const connectedWallet = connected?.wallet ?? null;
   useEffect(() => {
     if (!connectedWallet) return undefined;
     return watchWalletAccounts(connectedWallet, (account) => {
