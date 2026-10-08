@@ -60,11 +60,13 @@ signAuthChallenge({message, hashHex}) }`; the SDK keeps one per account in a mod
   (`tronAddressToHex`, checksum checked): `0x41` + 20 bytes + 4 bytes of checksum. The texts are the
   same two as for `personal_sign`. Quirks, all from TronLink's documentation, which is not clear in
   one place: discovery is TIP-6963 (`TIP6963:announceProvider`, `rdns org.tronlink.www`) or
-  `window.tron` (older `window.tronLink`); connect is `tron_requestAccounts` (answers
-  `{ code, message }`, the account is then in `tronWeb`). Not `eth_requestAccounts`: that opens
-  TronLink's Ethereum chooser and answers a `0x` account, which is not a TRON account (the TRON
-  connect failed that way on app-stage, 2026-10-08). `provider.tronWeb` is
-  `false` until the site is allowed, so `sharedWalletAccount` reads it for the no-prompt reconnect;
+  `window.tron` (older `window.tronLink`); connect is `eth_requestAccounts` (TronLink's documented
+  authorization, at developers.tron.network/docs/tronlink-integration): the person approves the site,
+  the answer is a `0x` account that the SDK does not read, and the TRON address is then
+  `provider.tronWeb.defaultAddress.base58`. `tron_requestAccounts` is the legacy method, and the TRON
+  provider answers it 4200 (the app-stage error "TronLink is too old", 2026-10-08; PR #35 had
+  wrongly used it). `provider.tronWeb` is `false` until the site is allowed, so `sharedWalletAccount`
+  reads it for the no-prompt reconnect;
   `signMessageV2` rejects with `Error("user rejected request")` and no code. **What `signMessageV2`
   takes is unclear**: one page says a hex string, another says plain text or hex. The SDK sends the
   text plain first; a TronLink that answers "Invalid transaction provided" before a prompt gets the

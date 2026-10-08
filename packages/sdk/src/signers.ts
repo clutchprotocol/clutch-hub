@@ -394,32 +394,25 @@ function evmAccountOf(raw: unknown): string | null {
 }
 
 /**
- * Ask TronLink to share its TRON account. `tron_requestAccounts` is TronLink's own request: it
- * answers `{ code, message }` and puts the account in `tronWeb`. Not `eth_requestAccounts`: that
- * is the Ethereum network's request, which opens TronLink's Ethereum chooser and answers a `0x`
- * account, which is not a TRON account (seen on app-stage, 2026-10-08). A TronLink that does not
- * know `tron_requestAccounts` (error 4200) is too old to connect here.
+ * Let this site in with TronLink, then read the TRON account. TronLink's documented authorization is
+ * `eth_requestAccounts` on its provider (`window.tron`): the person approves the site, and `tronWeb`
+ * then holds the TRON account (`false` until then). The address that request answers is an Ethereum
+ * `0x` account, so it is not read. `tron_requestAccounts` is the legacy method, which the TRON
+ * provider answers with 4200, so it is not used.
  */
 async function requestTronAccount(provider: TronLinkProvider): Promise<string | null> {
-  let answer: { code?: number; message?: string } | '' | null;
   try {
-    answer = (await provider.request({ method: 'tron_requestAccounts' })) as { code?: number; message?: string } | '' | null;
+    await provider.request({ method: 'eth_requestAccounts' });
   } catch (error) {
     if ((error as { code?: number } | null)?.code === 4200) {
       throw new Error('TronLink is too old for this site: update TronLink');
     }
     throw error;
   }
-  if (!answer) {
-    throw new Error('TronLink is locked: unlock it and try again');
+  if (!provider.tronWeb) {
+    throw new Error('TronLink has not let this site in: unlock TronLink, allow this site, and try again');
   }
-  if (answer.code === 4001) {
-    throw Object.assign(new Error('You said no in TronLink.'), { code: 4001 });
-  }
-  if (answer.code !== 200) {
-    throw new Error(answer.message || 'TronLink did not connect');
-  }
-  return tronAccountOf(provider.tronWeb ? provider.tronWeb.defaultAddress?.base58 : undefined);
+  return tronAccountOf(provider.tronWeb.defaultAddress?.base58);
 }
 
 /**
