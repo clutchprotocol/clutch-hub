@@ -11,6 +11,7 @@ import WithdrawPanel from './components/WithdrawPanel';
 import { OverlayPanel } from './components/layout';
 import UpdatePrompt from './components/UpdatePrompt';
 import EnvTag from './components/EnvTag';
+import AddToWalletButton from './components/AddToWalletButton';
 import { useWalletConnection } from './hooks/useWalletConnection';
 import { removeLegacyKeys } from './utils/walletSession';
 import { truncAddr } from './utils/address';
@@ -383,6 +384,9 @@ function App() {
                 {/* A button, not a link, so it matches the actions above without new CSS. The
                     explorer is public, so it does not need a wallet; it shows only on networks
                     that have one (config EXPLORER_URL). */}
+                {/* Puts the Clutch network in MetaMask or Trust Wallet, so the wallet shows the
+                    balance. Draws nothing for TronLink. */}
+                {userProfile.publicKey && <AddToWalletButton wallet={connection.wallet} />}
                 {EXPLORER_URL && (
                   <button
                     type="button"
