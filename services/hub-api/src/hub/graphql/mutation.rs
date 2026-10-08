@@ -483,6 +483,7 @@ mod tests {
             default_ride_offer_referrer: String::new(),
             token_rate_limit_per_minute,
             token_rate_limit_global_per_minute: 1_000,
+            wallet_chain_id: None,
         }
     }
 

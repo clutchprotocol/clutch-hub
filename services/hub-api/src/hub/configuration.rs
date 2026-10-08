@@ -42,6 +42,11 @@ pub struct AppConfig {
     /// signature recovery an unauthenticated flood can force. See `hub::ratelimit`.
     #[serde(default = "default_token_rate_limit_global_per_minute")]
     pub token_rate_limit_global_per_minute: u32,
+    /// The chain id wallets see at `POST /rpc` (`hub::eth_rpc`). Unset means the node's own
+    /// `chain_id`, which is fine locally; deployed hubs set an id no other network uses, because
+    /// MetaMask names a network by its id and the node's ids (2077, 1000) belong to others.
+    #[serde(default)]
+    pub wallet_chain_id: Option<u64>,
 }
 
 fn default_token_rate_limit_per_minute() -> u32 {
@@ -73,6 +78,7 @@ impl std::fmt::Debug for AppConfig {
                 "default_ride_offer_referrer",
                 &self.default_ride_offer_referrer,
             )
+            .field("wallet_chain_id", &self.wallet_chain_id)
             .finish()
     }
 }

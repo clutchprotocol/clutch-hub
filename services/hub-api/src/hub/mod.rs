@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod clutch_node_client;
 pub mod configuration;
+pub mod eth_rpc;
 pub mod graphql;
 pub mod metric;
 pub mod ratelimit;

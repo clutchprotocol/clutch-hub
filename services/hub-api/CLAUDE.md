@@ -11,13 +11,14 @@ Rust GraphQL bridge between client apps and clutch-node. Actix-web serves HTTP/W
 
 - Build: `cargo build` (release: `cargo build --release`; toolchain pinned to 1.86.0 in `rust-toolchain.toml`)
 - Run: `cargo run` (loads `config/default.toml`) or `cargo run -- --env <name>` → `config/<name>.toml`
-- Test: `cargo test` (unit tests only, inline in `src/hub/signature_keys.rs`, `src/hub/auth.rs`, and `src/hub/configuration.rs`; no integration tests). The `sdk_generated_fixture_*` tests in `auth.rs` pin cross-language agreement with SDK-signed auth challenges — regenerate them from the SDK signing code path if the challenge format ever changes.
+- Test: `cargo test` (unit tests only, inline in `src/hub/signature_keys.rs`, `src/hub/auth.rs`, `src/hub/configuration.rs` and `src/hub/eth_rpc.rs`; no integration tests). The `sdk_generated_fixture_*` tests in `auth.rs` pin cross-language agreement with SDK-signed auth challenges — regenerate them from the SDK signing code path if the challenge format ever changes.
 - Docker: `docker compose up --build` (API only, port 3000); container smoke test: `.\test-api.ps1`
 
 ## Source layout (`src/`)
 
 - `main.rs` — CLI arg parsing (`--env` flag or positional), loads config, starts tracing, metrics server, node WS client, then the Actix server.
-- `hub/server.rs` — Actix `HttpServer`: routes `/health`, `/graphql` (POST), `/graphql/ws` (GET, subscriptions). CORS is allow-any-origin.
+- `hub/server.rs` — Actix `HttpServer`: routes `/health`, `/graphql` (POST), `/graphql/ws` (GET, subscriptions), `/rpc` (POST). CORS is per resource: the first three use `allowed_origins`, `/rpc` allows any origin (a wallet calls it from its own origin, which no allowlist can name). Note actix-cors 0.7 does not refuse a disallowed origin; it only leaves out `Access-Control-Allow-Origin`, so the browser is what enforces the allowlist.
+- `hub/eth_rpc.rs` — `POST /rpc`, a **read-only Ethereum JSON-RPC face** so MetaMask and Trust Wallet can add Clutch as a network and show the CLT balance (added 2026-10-08). Answers `eth_chainId`, `net_version`, `eth_blockNumber`, `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber` (no transactions, no `baseFeePerGas`) and a few constants; batches up to 20. Balances are multiplied by 10^12 (wallets assume 18 decimals, CLT has 6). `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_estimateGas` refuse with "Send CLT from the Clutch app": the node rejects Ethereum-format transactions, and accepting them would be a consensus change. The chain id is `wallet_chain_id` from config (stage 20771, 20770 kept for mainnet), NOT the node's `chain_id`: 2077 and 1000 belong to other networks on chainlist. Unset falls back to the node's id. Dispatch is generic over `NodeReader` so its tests need no node.
 - `hub/graphql/mod.rs` — `build_schema()`: injects `Arc<ClutchNodeClient>` and `AppConfig` as schema data.
 - `hub/graphql/query.rs` — `Query` root: `list_ride_requests`, `list_ride_offers`, `list_active_trips`, `list_completed_trips`, `list_recent_trips`, `account_balance`.
 - `hub/graphql/mutation.rs` — `Mutation` root: `generate_token`, six `create_unsigned_*` ride builders, `send_raw_transaction`.
@@ -56,7 +57,7 @@ Rust GraphQL bridge between client apps and clutch-node. Actix-web serves HTTP/W
 ## Config
 
 - `config/<env>.toml` selected by `--env` (default `default`); only `config/default.toml` is checked in. Env overrides use the `APP_` prefix (e.g. `APP_JWT_SECRET`, `APP_CLUTCH_NODE_WS_URL`); `.env` is loaded via dotenv.
-- Key settings (`AppConfig` in `src/hub/configuration.rs`): `ws_addr` (main HTTP/GraphQL bind), `clutch_node_ws_url`, `jwt_secret`, `jwt_expiration_hours`, `serve_metric_addr`, `seq_url`/`seq_api_key`, `log_level`, `allowed_origins`, `default_ride_request_referrer`/`default_ride_offer_referrer`.
+- Key settings (`AppConfig` in `src/hub/configuration.rs`): `ws_addr` (main HTTP/GraphQL bind), `clutch_node_ws_url`, `jwt_secret`, `jwt_expiration_hours`, `serve_metric_addr`, `seq_url`/`seq_api_key`, `log_level`, `allowed_origins`, `default_ride_request_referrer`/`default_ride_offer_referrer`, `wallet_chain_id`.
 - Ports: GraphQL/HTTP on **3000**, metrics on **9090** — the local `config/default.toml` and the Docker/deploy config (`clutch-deploy/config/api/default.toml`, mounted over `/app/config`) agree on these.
 - `env.example` documents the working `APP_*` override names (e.g. `APP_JWT_SECRET`); copy it to `.env` and adjust.
 
