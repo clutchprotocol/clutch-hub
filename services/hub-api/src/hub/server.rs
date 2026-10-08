@@ -30,9 +30,9 @@ fn build_cors(allowed_origins: &str) -> Cors {
 }
 
 /// `/rpc` answers any origin. It serves only public chain data, and a wallet calls it from its own
-/// origin (a browser extension's, or none at all on a phone), which no allowlist could name.
-/// actix-cors refuses a request from an origin it does not allow, so `/rpc` must not sit behind
-/// the allowlist above: that is why each resource carries its own CORS instead of the whole app.
+/// origin (a browser extension's, or any site that adds the network for its users), which no
+/// allowlist could name. Two CORS layers on one route would fight over the headers, so each
+/// resource carries its own CORS instead of the whole app.
 fn rpc_cors() -> Cors {
     Cors::default()
         .allow_any_origin()
