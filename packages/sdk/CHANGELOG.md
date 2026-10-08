@@ -1,3 +1,10 @@
+## [4.4.3](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.2...v4.4.3) (2026-10-08)
+
+
+### Bug Fixes
+
+* **sdk:** connect TronLink with eth_requestAccounts, read TRON address from tronWeb ([8e83f28](https://github.com/clutchprotocol/clutch-hub/commit/8e83f287cf881733170cd346fa9690b4672b626f)), closes [#35](https://github.com/clutchprotocol/clutch-hub/issues/35) [#35](https://github.com/clutchprotocol/clutch-hub/issues/35)
+
 ## [4.4.2](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.1...v4.4.2) (2026-10-08)
 
 
