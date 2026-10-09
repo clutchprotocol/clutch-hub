@@ -74,12 +74,19 @@ export function useWalletConnection() {
   const connect = useCallback(async (wallet) => {
     setError('');
     setConnecting(true);
+    // A phone wallet reached through WalletConnect may send the person back in a new browser tab, or
+    // the phone may have closed this one while the wallet was open. The session itself survives in
+    // the library's storage, so the choice is remembered before the wallet opens: the page that the
+    // person comes back to then picks the session up on start (below) instead of asking again.
+    const viaRelay = Boolean(wallet.lazy);
+    if (viaRelay) rememberWalletId(wallet.id);
     try {
       const target = await attachWalletProvider(wallet, WALLETCONNECT_PROJECT_ID);
       const signer = await connectWallet(target);
       setConnected({ wallet: target, profile: { publicKey: signer.address, signer } });
       rememberWalletId(wallet.id);
     } catch (err) {
+      if (viaRelay) forgetWalletId();
       setError(describeWalletError(err));
     } finally {
       setConnecting(false);
