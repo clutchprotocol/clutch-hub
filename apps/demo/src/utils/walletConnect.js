@@ -14,6 +14,18 @@ export function walletConnectEntry(projectId) {
   return projectId ? { id: WALLETCONNECT_WALLET_ID, name: 'WalletConnect', kind: 'evm', lazy: true } : null;
 }
 
+/**
+ * What the WalletConnect button says. Few people know the name WalletConnect, so the button names the
+ * wallets it reaches instead. On a phone it opens the wallet app and comes back to this browser, which
+ * is why it is the way in there: the other one, opening this page inside the wallet's own browser,
+ * leaves the person in that browser.
+ */
+export function walletConnectLabel(mobile) {
+  return mobile
+    ? { name: 'MetaMask, Trust Wallet or another wallet app', hint: 'Approve in the wallet app, then come back to this page.' }
+    : { name: 'Wallet on your phone', hint: 'Scan a QR code with MetaMask, Trust Wallet or another wallet app.' };
+}
+
 /** Start the library. Nothing is shown until the provider's `enable()` is called. */
 async function initWalletConnect(projectId) {
   const { default: EthereumProvider } = await import('@walletconnect/ethereum-provider');
@@ -26,6 +38,8 @@ async function initWalletConnect(projectId) {
       description: 'Clutch Protocol rides',
       url: window.location.origin,
       icons: [],
+      // Where the wallet sends the person back after they approve, on wallets that do so.
+      redirect: { universal: window.location.href },
     },
   });
 }
