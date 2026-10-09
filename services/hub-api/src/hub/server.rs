@@ -1,6 +1,6 @@
 use crate::hub::clutch_node_client::{ChainInfo, ClutchNodeClient};
 use crate::hub::configuration::AppConfig;
-use crate::hub::eth_rpc::{eth_rpc_handler, WalletChainId};
+use crate::hub::eth_rpc::{eth_rpc_handler, WalletNetwork};
 use crate::hub::graphql::build_schema;
 use crate::hub::graphql::handler::{graphql_handler, graphql_ws_handler};
 use actix_cors::Cors;
@@ -55,7 +55,10 @@ pub async fn run_graphql_server(
     config: AppConfig,
     chain_info: Arc<ChainInfo>,
 ) -> std::io::Result<()> {
-    let wallet_chain_id = WalletChainId(config.wallet_chain_id.unwrap_or(chain_info.chain_id));
+    let wallet_network = WalletNetwork {
+        chain_id: config.wallet_chain_id.unwrap_or(chain_info.chain_id),
+        tx_fee: chain_info.tx_fee,
+    };
     let schema = build_schema(ws_manager.clone(), config.clone(), chain_info);
     let allowed_origins = config.allowed_origins.clone();
     HttpServer::new(move || {
@@ -63,7 +66,7 @@ pub async fn run_graphql_server(
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(schema.clone()))
             .app_data(web::Data::new(ws_manager.clone()))
-            .app_data(web::Data::new(wallet_chain_id))
+            .app_data(web::Data::new(wallet_network))
             .service(
                 web::resource("/health")
                     .wrap(build_cors(&allowed_origins))
