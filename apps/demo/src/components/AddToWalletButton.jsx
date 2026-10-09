@@ -6,7 +6,7 @@ import { describeWalletError } from '../utils/walletSession';
 /**
  * "Add Clutch to wallet": adds the Clutch network to MetaMask or Trust Wallet, so the wallet shows
  * the CLT balance (see utils/walletNetwork.js). Not drawn for TronLink, which cannot add networks.
- * The wallet can show the balance only: sending from it is refused, so the note says where to send.
+ * The same action is offered once on the main page by AddToWalletPrompt.
  */
 const AddToWalletButton = ({ wallet }) => {
   const [busy, setBusy] = useState(false);
@@ -21,7 +21,7 @@ const AddToWalletButton = ({ wallet }) => {
       await addClutchToWallet(wallet, { apiUrl: API_URL, explorerUrl: EXPLORER_URL, isTestnet: IS_TESTNET });
       setStatus({
         kind: 'success',
-        text: `Added. ${wallet.name || 'Your wallet'} shows your CLT balance on the Clutch network. Send CLT from this app, not from the wallet.`,
+        text: `Added. ${wallet.name || 'Your wallet'} shows your CLT balance on the Clutch network.`,
       });
     } catch (err) {
       setStatus({ kind: 'error', text: describeWalletError(err, 'Could not add the Clutch network') });

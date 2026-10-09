@@ -677,3 +677,26 @@ button.top-pill--menu:hover {
     bottom: 1.5rem;
   }
 }
+
+/* The "Add Clutch to MetaMask" prompt on the main page (AddToWalletPrompt): UpdatePrompt's look,
+   under the top bar instead of above the nav, so both can show at once. */
+.wallet-prompt {
+  top: calc(var(--top-bar-h) + 4px + 0.75rem + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+@media (min-width: 1024px) {
+  .wallet-prompt {
+    bottom: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .wallet-prompt {
+    flex-wrap: wrap;
+  }
+
+  .wallet-prompt .update-prompt-text {
+    flex-basis: 100%;
+  }
+}
