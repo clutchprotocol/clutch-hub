@@ -24,6 +24,14 @@
 //! - **Chain id.** The wallet chain id is `wallet_chain_id` in config, not the node's `chain_id`:
 //!   the node's ids (2077 testnet, 1000 mainnet) are already registered to other networks on
 //!   chainlist, and a wallet would show their names. Nothing signs with this id, so it can differ.
+//!
+//! **Block hashes.** A wallet looks a block up by hash: MetaMask marks a send confirmed only after
+//! `eth_getBlockByHash` on its receipt's block answers (it reads the block's timestamp), and
+//! leaves it pending for ever while that answers null. The node finds blocks by height only, so the
+//! hash a wallet sees is the node's block hash with its last 8 bytes replaced by the height
+//! (`wallet_block_hash`). That is unique, needs no index or cache, and `eth_getBlockByHash` reads
+//! the height back and checks the other 24 bytes against the block. The explorer shows the node's
+//! own hash, which differs from the wallet's in those 8 bytes.
 
 use crate::hub::clutch_node_client::ClutchNodeClient;
 use actix_web::{web, HttpResponse};
@@ -173,10 +181,7 @@ fn eth_transaction(found: &Value, tx_fee: u64) -> Option<(Value, Option<Value>)>
     let r = with_0x(tx.get("signature_r")?.as_str()?);
     let s = with_0x(tx.get("signature_s")?.as_str()?);
     let block_number = found.get("block_index").and_then(Value::as_u64);
-    let block_hash = found
-        .get("block_hash")
-        .and_then(Value::as_str)
-        .map(|h| to_hash(Some(&Value::String(h.to_string()))));
+    let block_hash = block_number.map(|n| wallet_block_hash(found.get("block_hash"), n));
 
     let transaction = json!({
         "hash": hash,
@@ -267,6 +272,27 @@ fn to_hash(value: Option<&Value>) -> String {
     }
 }
 
+/// The hash a wallet sees for the block at `index`: the node's hash with its last 8 bytes replaced
+/// by the height, so `eth_getBlockByHash` can find the block again (see the module comment).
+fn wallet_block_hash(node_hash: Option<&Value>, index: u64) -> String {
+    let hash = to_hash(node_hash);
+    if hash == ZERO_HASH {
+        return hash;
+    }
+    format!("{}{:016x}", &hash[..WALLET_HASH_PREFIX], index)
+}
+
+/// `0x` and the 24 bytes of the node's hash that a wallet block hash keeps.
+const WALLET_HASH_PREFIX: usize = 2 + 48;
+
+/// The height a wallet block hash carries, or None if it is not 32 bytes of hex.
+fn wallet_block_index(hash: &str) -> Option<u64> {
+    if hash.len() != 66 {
+        return None;
+    }
+    u64::from_str_radix(&hash[WALLET_HASH_PREFIX..], 16).ok()
+}
+
 /// A block tag or number. `None` for "latest" and its synonyms (this chain has no finality lag a
 /// wallet could act on). An unreadable tag is an error.
 fn parse_block_tag(value: Option<&Value>) -> Result<Option<u64>, RpcError> {
@@ -291,8 +317,11 @@ fn eth_block(block: &Value, index: u64) -> Value {
     let timestamp = block.get("timestamp").and_then(Value::as_u64).unwrap_or(0);
     json!({
         "number": hex_u64(index),
-        "hash": to_hash(block.get("hash")),
-        "parentHash": to_hash(block.get("previous_hash")),
+        "hash": wallet_block_hash(block.get("hash"), index),
+        "parentHash": match index.checked_sub(1) {
+            Some(parent) => wallet_block_hash(block.get("previous_hash"), parent),
+            None => ZERO_HASH.to_string(),
+        },
         "nonce": "0x0000000000000000",
         "sha3Uncles": EMPTY_UNCLES_HASH,
         "logsBloom": format!("0x{}", "0".repeat(512)),
@@ -335,7 +364,23 @@ pub async fn dispatch<N: NodeReader>(
         "eth_maxPriorityFeePerGas" => Ok(hex_u64(0)),
         "eth_getCode" => Ok(Value::String("0x".to_string())),
         "eth_getLogs" => Ok(json!([])),
-        "eth_getBlockByHash" => Ok(Value::Null),
+        "eth_getBlockByHash" => {
+            let hash = hex_param(params.first())?;
+            let Some(index) = wallet_block_index(&hash) else {
+                return Ok(Value::Null);
+            };
+            let latest = node.latest_block_index().await.map_err(node_err)?;
+            if index > latest {
+                return Ok(Value::Null);
+            }
+            match node.block_by_index(index).await.map_err(node_err)? {
+                Some(block) => {
+                    let found = eth_block(&block, index);
+                    Ok(if found["hash"] == json!(hash) { found } else { Value::Null })
+                }
+                None => Ok(Value::Null),
+            }
+        }
         "eth_getTransactionByHash" | "eth_getTransactionReceipt" => {
             let hash = hex_param(params.first())?;
             let found = node.transaction_by_hash(&hash).await.map_err(node_err)?;
@@ -468,6 +513,11 @@ mod tests {
     const OTHER: &str = "0x00000000000000000000000000000000000000000000000000000000000000aa";
     const NET: WalletNetwork = WalletNetwork { chain_id: 20771, tx_fee: 1000 };
 
+    /// The wallet hash of the fake node's block 300: its hash with the height in the last 8 bytes.
+    fn block_300() -> String {
+        format!("0x{}{:016x}", "ab".repeat(24), 300)
+    }
+
     impl NodeReader for FakeNode {
         async fn balance(&self, address: &str) -> Result<u64, String> {
             assert_eq!(address, ALICE, "the node is asked with the canonical lower-case form");
@@ -488,7 +538,7 @@ mod tests {
         }
         async fn transaction_by_hash(&self, hash: &str) -> Result<Option<Value>, String> {
             let block = |i: Option<u64>| match i {
-                Some(i) => (json!(i), json!("cd".repeat(32))),
+                Some(i) => (json!(i), json!("ab".repeat(32))),
                 None => (Value::Null, Value::Null),
             };
             let (index, block_hash) = match hash {
@@ -599,7 +649,7 @@ mod tests {
         assert_eq!(call("eth_blockNumber", json!([])).await.unwrap(), json!("0x12c"));
         let block = call("eth_getBlockByNumber", json!(["latest", false])).await.unwrap();
         assert_eq!(block["number"], json!("0x12c"));
-        assert_eq!(block["hash"], json!(format!("0x{}", "ab".repeat(32))));
+        assert_eq!(block["hash"], json!(block_300()));
         assert_eq!(block["parentHash"], json!(ZERO_HASH));
         assert_eq!(block["miner"], json!("0x662c5f11ed534ae93f29ed5e02a928081056f5f9"));
         assert_eq!(block["timestamp"], json!("0x6ab13b80"));
@@ -650,7 +700,7 @@ mod tests {
         assert_eq!(receipt["status"], json!("0x1"));
         assert_eq!(receipt["transactionHash"], json!(MINED));
         assert_eq!(receipt["blockNumber"], json!("0x12c"));
-        assert_eq!(receipt["blockHash"], json!(format!("0x{}", "cd".repeat(32))));
+        assert_eq!(receipt["blockHash"], json!(block_300()));
         assert_eq!(receipt["from"], json!(ALICE));
         // gas used x price = 1000 base units = 10^15 wei, the fee charged.
         assert_eq!(receipt["gasUsed"], json!("0x3e8"));
@@ -661,6 +711,29 @@ mod tests {
         assert_eq!(tx["value"], json!("0x6f05b59d3b20000"), "0.5 at 18 decimals");
         assert_eq!(tx["v"], json!(format!("0x{:x}", 20771 * 2 + 36)));
         assert_eq!(tx["blockNumber"], json!("0x12c"));
+    }
+
+    /// MetaMask reads the receipt's block by hash before it marks a send confirmed, and leaves the
+    /// send pending while that answers null (seen on stage, 2026-10-09).
+    #[tokio::test]
+    async fn the_receipt_block_is_found_by_its_hash() {
+        let receipt = call("eth_getTransactionReceipt", json!([MINED])).await.unwrap();
+        let block = call("eth_getBlockByHash", json!([receipt["blockHash"], false])).await.unwrap();
+        assert_eq!(block["number"], json!("0x12c"));
+        assert_eq!(block["hash"], receipt["blockHash"]);
+        assert_eq!(block["timestamp"], json!("0x6ab13b80"));
+        let upper = block_300().to_ascii_uppercase().replace("0X", "0x");
+        assert_eq!(call("eth_getBlockByHash", json!([upper, false])).await.unwrap()["number"], json!("0x12c"));
+    }
+
+    #[tokio::test]
+    async fn a_block_hash_that_is_not_this_chains_is_null() {
+        // The right height with another block's bytes, a height above the chain, and a short hash.
+        let other = format!("0x{}{:016x}", "cd".repeat(24), 300);
+        assert_eq!(call("eth_getBlockByHash", json!([other, false])).await.unwrap(), Value::Null);
+        let future = format!("0x{}{:016x}", "ab".repeat(24), 301);
+        assert_eq!(call("eth_getBlockByHash", json!([future, false])).await.unwrap(), Value::Null);
+        assert_eq!(call("eth_getBlockByHash", json!(["0xabcd", false])).await.unwrap(), Value::Null);
     }
 
     #[tokio::test]
