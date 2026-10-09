@@ -1,4 +1,5 @@
 import React from 'react';
+import { walletConnectLabel } from '../utils/walletConnect';
 import { isMobileUserAgent, walletHelpLinks } from '../utils/walletSession';
 
 /**
@@ -10,10 +11,17 @@ import { isMobileUserAgent, walletHelpLinks } from '../utils/walletSession';
  * one, with a link that opens this page inside the wallet app on a phone (where most riders are).
  * A TronLink account is the same key as a Clutch account, so its entry carries a "TRON" tag, and a
  * note says that TronLink's `T…` address and the app's `0x…` address are one account.
+ *
+ * In a phone's own browser no wallet is injected. When the build has a WalletConnect project ID, that
+ * option is the way in there: it opens the wallet app to approve and the app stays in the phone's
+ * browser. The links that open this page inside a wallet's browser are then only a fallback, below it.
+ * Without a project ID they are the only way, as before.
  */
 const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSearch }) => {
   const mobile = isMobileUserAgent(window.navigator.userAgent);
   const links = walletHelpLinks({ href: window.location.href, mobile });
+  const injectedFound = wallets.some((wallet) => !wallet.lazy);
+  const phoneWalletOffered = wallets.some((wallet) => wallet.lazy);
 
   return (
     <div className="wallet-connect">
@@ -47,17 +55,24 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
               ) : (
                 <span className="wallet-connect-icon wallet-connect-icon--blank" aria-hidden="true" />
               )}
-              <span className="wallet-connect-name">
-                {wallet.name}
-                {wallet.kind === 'tron' && <span className="wallet-connect-kind">TRON</span>}
-              </span>
+              {wallet.lazy ? (
+                <span className="wallet-connect-name wallet-connect-name--long">
+                  {walletConnectLabel(mobile).name}
+                  <span className="wallet-connect-hint">{walletConnectLabel(mobile).hint}</span>
+                </span>
+              ) : (
+                <span className="wallet-connect-name">
+                  {wallet.name}
+                  {wallet.kind === 'tron' && <span className="wallet-connect-kind">TRON</span>}
+                </span>
+              )}
               <span className="wallet-connect-go">{connecting ? 'Check your wallet…' : 'Connect'}</span>
             </button>
           ))}
         </div>
       )}
 
-      {!searching && !wallets.some((wallet) => !wallet.lazy) && (
+      {!searching && !injectedFound && !phoneWalletOffered && (
         <div className="status-banner info wallet-connect-help" role="note">
           <strong>No wallet found in this browser.</strong>
           <span>
@@ -66,13 +81,18 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
               ? 'Open this page inside the wallet app:'
               : 'Install one, then come back and look again:'}
           </span>
-          <span className="wallet-connect-links">
-            {links.map((link) => (
-              <a key={link.id} className="btn-secondary" href={link.url} rel="noopener noreferrer">
-                {link.label}
-              </a>
-            ))}
+          <WalletHelpLinks links={links} />
+        </div>
+      )}
+
+      {!searching && !injectedFound && phoneWalletOffered && (
+        <div className="wallet-connect-fallback">
+          <span>
+            {mobile
+              ? 'Using TronLink, or the button above does not work? Open this page inside the wallet app:'
+              : 'Or install a wallet in this browser:'}
           </span>
+          <WalletHelpLinks links={links} />
         </div>
       )}
 
@@ -100,5 +120,15 @@ const WalletConnect = ({ wallets, searching, connecting, error, onConnect, onSea
     </div>
   );
 };
+
+const WalletHelpLinks = ({ links }) => (
+  <span className="wallet-connect-links">
+    {links.map((link) => (
+      <a key={link.id} className="btn-secondary" href={link.url} rel="noopener noreferrer">
+        {link.label}
+      </a>
+    ))}
+  </span>
+);
 
 export default WalletConnect;

@@ -196,6 +196,21 @@
   vertical-align: middle;
 }
 
+/* The WalletConnect button names several wallets, so its name is smaller. */
+.wallet-connect-name--long {
+  font-size: 1.2rem;
+}
+
+/* The line under the WalletConnect button's name: what happens when it is pressed. */
+.wallet-connect-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .wallet-connect-go {
   font-weight: 600;
   color: var(--sign-deep);
@@ -212,6 +227,15 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+}
+
+/* With WalletConnect offered, opening the page inside a wallet's browser is only a fallback. */
+.wallet-connect-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 /* The links are anchors that look like the secondary button. */

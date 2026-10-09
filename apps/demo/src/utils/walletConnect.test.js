@@ -6,6 +6,7 @@ import {
   providerOnce,
   walletConnectAsEip1193,
   walletConnectEntry,
+  walletConnectLabel,
 } from './walletConnect.js';
 
 test('without a project ID there is no WalletConnect entry', () => {
@@ -111,4 +112,11 @@ test('ending a session the phone already closed does not throw', async () => {
     },
   };
   await endWalletSession({ id: 'walletconnect', provider: walletConnectAsEip1193(library) });
+});
+
+test('the WalletConnect button names the wallets it reaches, not WalletConnect', () => {
+  assert.match(walletConnectLabel(true).name, /MetaMask, Trust Wallet/);
+  assert.match(walletConnectLabel(true).hint, /come back to this page/);
+  assert.equal(walletConnectLabel(false).name, 'Wallet on your phone');
+  assert.match(walletConnectLabel(false).hint, /QR code/);
 });
