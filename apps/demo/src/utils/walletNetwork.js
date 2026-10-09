@@ -2,8 +2,8 @@
 // shows the person's CLT balance next to their other coins.
 //
 // The Hub API answers the wallet's questions at `<API_URL>/rpc` (services/hub-api/src/hub/eth_rpc.rs).
-// It is read-only: the wallet can show the balance, and sending from the wallet is refused with a
-// message that says to send from this app. The wallet's chain id comes from that endpoint itself
+// The wallet shows the balance, and can send CLT where the chain has wallet transfers switched on
+// (clutch-node WalletTransfer; stage from block 0, mainnet from block 17000). The wallet's chain id comes from that endpoint itself
 // (eth_chainId), so the app never holds a second copy of it that could drift. Wallets assume 18
 // decimals for a network's coin; the endpoint scales the balance, so 1 CLT-dollar shows as 1 CLT.
 //

@@ -12,6 +12,7 @@ import { OverlayPanel } from './components/layout';
 import UpdatePrompt from './components/UpdatePrompt';
 import EnvTag from './components/EnvTag';
 import AddToWalletButton from './components/AddToWalletButton';
+import AddToWalletPrompt from './components/AddToWalletPrompt';
 import { useWalletConnection } from './hooks/useWalletConnection';
 import { removeLegacyKeys } from './utils/walletSession';
 import { truncAddr } from './utils/address';
@@ -274,6 +275,7 @@ function App() {
       </OverlayPanel>
 
       <UpdatePrompt />
+      {userProfile.publicKey && <AddToWalletPrompt wallet={connection.wallet} />}
 
       <nav className="bottom-nav" aria-label="App navigation">
         <button
