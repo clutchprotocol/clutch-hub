@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex};
 use tokio::time::{timeout, Duration};
 use tokio_tungstenite::tungstenite::protocol::Message;
-use tracing::info;
+use tracing::debug;
 use uuid::Uuid;
 
 /// Node's `get_chain_info` response. `total_supply` is a decimal string on the wire (the
@@ -77,8 +77,9 @@ impl ClutchNodeClient {
 
         let request_json = serde_json::to_string(&request).map_err(|e| e.to_string())?;
         
-        // Log the actual request being sent for debugging
-        info!("Sending request to node: {}", request_json);
+        // Every node call, at debug: at info this logged each request and its full response and
+        // grew the mainnet container log by about 800 MB a day.
+        debug!("Sending request to node: {}", request_json);
 
         // Check if the connection is established
         let mut ws_sink_lock = self.ws_sink.lock().await;
@@ -108,8 +109,7 @@ impl ClutchNodeClient {
                         return Err("Connection lost before receiving response".to_string());
                     }
 
-                    // Log the response for debugging
-                    info!("Received response: {}", response_json);
+                    debug!("Received response: {}", response_json);
 
                     // Parse the response
                     let response: JSONRPCResponse =
@@ -154,7 +154,7 @@ impl ClutchNodeClient {
 
         match result.get("nonce").and_then(|n| n.as_u64()) {
             Some(nonce) => {
-                info!("Retrieved nonce {} for address {}", nonce, address);
+                debug!("Retrieved nonce {} for address {}", nonce, address);
                 Ok(nonce)
             }
             None => Err(format!(
@@ -177,7 +177,7 @@ impl ClutchNodeClient {
 
         match result.get("balance").and_then(|n| n.as_u64()) {
             Some(balance) => {
-                info!("Retrieved balance {} for address {}", balance, address);
+                debug!("Retrieved balance {} for address {}", balance, address);
                 Ok(balance)
             }
             None => Err(format!(
