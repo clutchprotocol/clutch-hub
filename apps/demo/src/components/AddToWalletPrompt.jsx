@@ -49,6 +49,8 @@ const AddToWalletPrompt = ({ wallet }) => {
       await addClutchToWallet(wallet, { apiUrl: API_URL, explorerUrl: EXPLORER_URL, isTestnet: IS_TESTNET });
       close('added');
     } catch (err) {
+      // The whole error, for the browser console: the line on screen can only hold part of it.
+      console.error('Adding the Clutch network failed', err);
       setError(describeWalletError(err, 'Could not add the Clutch network'));
     } finally {
       setBusy(false);

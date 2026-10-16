@@ -60,13 +60,24 @@ export function removeLegacyKeys(storage) {
   }
 }
 
+/** `fallback`, plus the wallet's code and nested reason when it gave any. */
+function withWalletDetail(fallback, error) {
+  if (typeof error === 'string' && error) return `${fallback}: ${error}`;
+  const reason = error?.data?.message || error?.data?.originalError?.message || error?.cause?.message;
+  const code = error?.code !== undefined && error?.code !== null ? `wallet error ${error.code}` : '';
+  const detail = [code, reason].filter(Boolean).join(': ');
+  return detail ? `${fallback} (${detail})` : fallback;
+}
+
 const SAID_NO = 'You said no in your wallet, so nothing was sent.';
 
 /**
  * Plain words for what went wrong in a wallet. The codes are EIP-1193's. TronLink says no to a
  * signature with an error that has a message ("user rejected request") and no code. Anything else
  * keeps its own message, which the SDK and the hub write for people; `fallback` is for an error
- * with none.
+ * with none. A wallet can refuse with a code and no message (MetaMask did, adding the network), so
+ * the fallback then carries the code and any reason nested in `data`: without them the line says
+ * nothing about why.
  */
 export function describeWalletError(error, fallback = 'Something went wrong with your wallet.') {
   switch (error?.code) {
@@ -80,7 +91,8 @@ export function describeWalletError(error, fallback = 'Something went wrong with
     case 4901:
       return 'Your wallet is not connected. Open it and try again.';
     default:
-      return /^user rejected (the )?request/i.test(error?.message ?? '') ? SAID_NO : error?.message || fallback;
+      if (/^user rejected (the )?request/i.test(error?.message ?? '')) return SAID_NO;
+      return error?.message || withWalletDetail(fallback, error);
   }
 }
 
