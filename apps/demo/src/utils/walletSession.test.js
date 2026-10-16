@@ -83,6 +83,13 @@ test('wallet errors are put in plain words', () => {
   assert.match(describeWalletError(undefined), /went wrong with your wallet/);
   assert.equal(describeWalletError({}, 'Payment failed'), 'Payment failed');
   assert.equal(describeWalletError({ message: 'insufficient balance' }, 'Payment failed'), 'insufficient balance');
+  // A wallet that refuses with a code and no message: the line keeps the code and any nested reason.
+  assert.equal(describeWalletError({ code: -32603 }, 'Could not add'), 'Could not add (wallet error -32603)');
+  assert.equal(
+    describeWalletError({ code: -32603, message: '', data: { originalError: { message: 'Invalid RPC URL' } } }, 'Could not add'),
+    'Could not add (wallet error -32603: Invalid RPC URL)',
+  );
+  assert.equal(describeWalletError('rpc unreachable', 'Could not add'), 'Could not add: rpc unreachable');
 });
 
 test('the prompt line says what to approve, and that a sign-in comes first when it does', () => {

@@ -24,6 +24,8 @@ const AddToWalletButton = ({ wallet }) => {
         text: `Added. ${wallet.name || 'Your wallet'} shows your CLT balance on the Clutch network.`,
       });
     } catch (err) {
+      // The whole error, for the browser console: the line on screen can only hold part of it.
+      console.error('Adding the Clutch network failed', err);
       setStatus({ kind: 'error', text: describeWalletError(err, 'Could not add the Clutch network') });
     } finally {
       setBusy(false);
