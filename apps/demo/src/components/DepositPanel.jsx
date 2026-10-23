@@ -4,6 +4,7 @@ import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config'
 import { Row } from './receipt';
 import QrCode from './QrCode';
 import WalletNote from './WalletNote';
+import DirectTopUp from './DirectTopUp';
 import { formatExactUsdt } from '../utils/money';
 import { depositTerms, serviceFee } from '../utils/depositTerms';
 import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
@@ -197,7 +198,7 @@ const TestnetFaucetGuide = () => (
  * `sdk.getAuthHeaders()`), not to sign a transaction, and only when the panel opens: the
  * 10-second refresh never opens a wallet prompt.
  */
-const DepositPanel = ({ userProfile, open }) => {
+const DepositPanel = ({ userProfile, open, wallet }) => {
   const [address, setAddress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -340,6 +341,15 @@ const DepositPanel = ({ userProfile, open }) => {
         <div className="status-banner error">{error}</div>
       )}
 
+      {address && wallet?.kind === 'tron' && (
+        // Signed in with TronLink: paying from it skips the deposit address and its relay fee. The
+        // address below still works, for paying from anywhere else.
+        <>
+          <DirectTopUp wallet={wallet} userProfile={userProfile} />
+          <h4 className="r-title">Or send to your deposit address</h4>
+        </>
+      )}
+
       {address && (
         <>
           <div className="deposit-main">
@@ -423,7 +433,10 @@ const DepositPanel = ({ userProfile, open }) => {
                   {DEPOSIT_STATUS_LABELS[d.status] ?? d.status}
                 </span>
                 <span className="r-note">{depositTime(d)}</span>
-                <span className="deposit-hash">{truncHash(d.tron_tx_id)}</span>
+                <span className="deposit-hash">
+                  {d.direct ? 'TronLink · ' : ''}
+                  {truncHash(d.tron_tx_id)}
+                </span>
               </li>
             ))}
           </ul>
