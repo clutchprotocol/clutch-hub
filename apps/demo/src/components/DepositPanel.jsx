@@ -5,7 +5,7 @@ import { Row } from './receipt';
 import QrCode from './QrCode';
 import WalletNote from './WalletNote';
 import { formatExactUsdt } from '../utils/money';
-import { depositTerms } from '../utils/depositTerms';
+import { depositTerms, serviceFee } from '../utils/depositTerms';
 import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
 import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
 
@@ -204,6 +204,7 @@ const DepositPanel = ({ userProfile, open }) => {
   const [unavailable, setUnavailable] = useState(false);
   const [deposits, setDeposits] = useState([]);
   const [terms, setTerms] = useState(null);
+  const [fee, setFee] = useState(null);
   // What the wallet's prompt is for, while one is open.
   const [walletNote, setWalletNote] = useState('');
 
@@ -281,6 +282,7 @@ const DepositPanel = ({ userProfile, open }) => {
         if (!cancelled) {
           setAddress(body.address);
           setTerms(depositTerms(body));
+          setFee(serviceFee(body));
         }
 
         // Best-effort: only bother once we know deposits are actually on (the POST above didn't
@@ -384,6 +386,14 @@ const DepositPanel = ({ userProfile, open }) => {
               <Row label="Amount">Any amount</Row>
             )}
             <Row label="Credited as">CLT</Row>
+            {fee && (
+              // Taken from the CLT credited, not from the USDT sent, so it changes nothing above.
+              <Row label="Service fee">
+                {fee.waived
+                  ? `None on your first top-up, then ${fee.percent} (at least ${fee.minimum} USDT)`
+                  : `${fee.percent} of what is credited, at least ${fee.minimum} USDT`}
+              </Row>
+            )}
           </div>
 
           {terms && (

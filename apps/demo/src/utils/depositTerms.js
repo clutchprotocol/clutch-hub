@@ -23,6 +23,22 @@ export function depositTerms(body) {
   return { feeUpTo: usdt(fee), minimum: usdt(minimum), sendAtLeast: usdt(fee + minimum) };
 }
 
+/**
+ * The treasury's service fee, from the same answer: a share of the CLT a top-up mints, at least a
+ * minimum, never on the user's first top-up (clutch-treasury `service_fee.rs`). Unlike the network
+ * fee it is not taken from the USDT, so it does not change what to send.
+ *
+ * @param {{ service_fee_bps?: number|string, service_fee_min_usdt?: number|string, service_fee_waived?: boolean } | undefined} body
+ * @returns {{ percent: string, minimum: string, waived: boolean } | null} e.g. "1%", "0.50"; null when there is no fee
+ */
+export function serviceFee(body) {
+  if (body?.service_fee_bps == null) return null;
+  const bps = Number(body.service_fee_bps);
+  if (!Number.isInteger(bps) || bps <= 0) return null;
+  const percent = `${(bps / 100).toString()}%`;
+  return { percent, minimum: usdt(BigInt(body.service_fee_min_usdt ?? 0)), waived: body.service_fee_waived === true };
+}
+
 /** Micro-USDT as USDT, with trailing zeros trimmed down to two decimals: "2.00", "1.234567". */
 function usdt(micro) {
   const whole = micro / 1_000_000n;
