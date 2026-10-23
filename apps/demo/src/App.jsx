@@ -257,6 +257,7 @@ function App() {
         >
           <DepositPanel
             userProfile={userProfile}
+            wallet={connection.wallet}
             open={walletOpen && walletTab === 'wallet-topup'}
           />
         </div>

@@ -143,6 +143,15 @@
   padding-inline: 0.75rem;
 }
 
+/* Pay from TronLink (DirectTopUp): its own block above the deposit address, which follows it as the
+   other way to pay. */
+.direct-topup {
+  display: grid;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed rgba(20, 24, 28, 0.55);
+}
+
 .deposit-rows {
   display: grid;
   gap: 0.35rem;
