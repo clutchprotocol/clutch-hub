@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { depositTerms } from './depositTerms.js';
+import { depositTerms, serviceFee } from './depositTerms.js';
 
 test('a plain address has no terms', () => {
   assert.equal(depositTerms({ address: 'TPlainAddress' }), null);
@@ -31,4 +31,21 @@ test('every micro-USDT is kept', () => {
 test('one of the two fields alone is not terms', () => {
   assert.equal(depositTerms({ fee_up_to_usdt: 500_000 }), null);
   assert.equal(depositTerms({ min_deposit_usdt: 1_000_000 }), null);
+});
+
+test('no service fee unless the answer names one', () => {
+  assert.equal(serviceFee({ address: 'T' }), null);
+  assert.equal(serviceFee(undefined), null);
+  assert.equal(serviceFee({ service_fee_bps: 0, service_fee_min_usdt: 0 }), null);
+});
+
+test('the service fee as a percent and a minimum, waived on a first top-up', () => {
+  assert.deepEqual(
+    serviceFee({ service_fee_bps: 100, service_fee_min_usdt: 500_000, service_fee_waived: true }),
+    { percent: '1%', minimum: '0.50', waived: true },
+  );
+  assert.deepEqual(
+    serviceFee({ service_fee_bps: '150', service_fee_min_usdt: '0', service_fee_waived: false }),
+    { percent: '1.5%', minimum: '0.00', waived: false },
+  );
 });
