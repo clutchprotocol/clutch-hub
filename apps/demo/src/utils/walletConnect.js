@@ -31,7 +31,8 @@ async function initWalletConnect(projectId) {
   const { default: EthereumProvider } = await import('@walletconnect/ethereum-provider');
   return EthereumProvider.init({
     projectId,
-    optionalChains: [1],
+    // 56 and 97 for BNB Chain top-ups (BscTopUp): a WalletConnect session can only switch to a chain it was opened with.
+    optionalChains: [1, 56, 97],
     showQrModal: true,
     metadata: {
       name: 'Clutch',

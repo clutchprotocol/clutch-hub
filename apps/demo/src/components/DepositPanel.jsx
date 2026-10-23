@@ -4,11 +4,13 @@ import { API_URL, CHAIN_ID, IS_TESTNET, ORCHESTRATOR_BASE_URL } from '../config'
 import { Row } from './receipt';
 import QrCode from './QrCode';
 import WalletNote from './WalletNote';
+import BscTopUp from './BscTopUp';
 import DirectTopUp from './DirectTopUp';
 import { formatExactUsdt } from '../utils/money';
 import { depositTerms, serviceFee } from '../utils/depositTerms';
 import { readJsonBody, refusalMessage } from '../utils/orchestratorReply';
 import { approveInWalletMessage, describeWalletError } from '../utils/walletSession';
+import { canAddNetwork } from '../utils/walletNetwork';
 
 /** `truncHash`/`timeAgo`, copied from `TransactionHistory.jsx` (module-private there, not
  * exported) rather than imported — a few duplicated lines beat coupling this panel to a
@@ -205,6 +207,8 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
   const [unavailable, setUnavailable] = useState(false);
   const [deposits, setDeposits] = useState([]);
   const [terms, setTerms] = useState(null);
+  // The BSC chain id while BNB Chain top-ups are on (the deposit answer's `bsc_chain_id`), else null.
+  const [bscChainId, setBscChainId] = useState(null);
   const [fee, setFee] = useState(null);
   // What the wallet's prompt is for, while one is open.
   const [walletNote, setWalletNote] = useState('');
@@ -284,6 +288,7 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
           setAddress(body.address);
           setTerms(depositTerms(body));
           setFee(serviceFee(body));
+          setBscChainId(Number(body.bsc_chain_id) || null);
         }
 
         // Best-effort: only bother once we know deposits are actually on (the POST above didn't
@@ -347,6 +352,15 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
         <>
           <DirectTopUp wallet={wallet} userProfile={userProfile} />
           <h4 className="r-title">Or send to your deposit address</h4>
+        </>
+      )}
+
+      {address && bscChainId && canAddNetwork(wallet) && (
+        // Signed in with an Ethereum wallet: paying USDT on BNB Chain from it costs cents and needs no
+        // deposit address. The TRON address below still works.
+        <>
+          <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscChainId === 97} />
+          <h4 className="r-title">Or send USDT on Tron to your deposit address</h4>
         </>
       )}
 
@@ -434,7 +448,7 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
                 </span>
                 <span className="r-note">{depositTime(d)}</span>
                 <span className="deposit-hash">
-                  {d.direct ? 'TronLink · ' : ''}
+                  {d.network === 'bsc' ? 'BNB Chain · ' : d.direct ? 'TronLink · ' : ''}
                   {truncHash(d.tron_tx_id)}
                 </span>
               </li>
