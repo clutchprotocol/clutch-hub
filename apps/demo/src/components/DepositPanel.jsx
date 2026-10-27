@@ -192,9 +192,29 @@ const TestnetFaucetGuide = () => (
   </details>
 );
 
+/** One choice in the network picker: a radio button drawn as a card, with the network's name, its
+ * token standard and who can pay on it. */
+function NetworkOption({ value, checked, onChange, disabled, name, standard, detail }) {
+  return (
+    <label className={`network-option${checked ? ' is-checked' : ''}${disabled ? ' is-disabled' : ''}`}>
+      <input
+        type="radio"
+        name="topup-network"
+        value={value}
+        checked={checked}
+        disabled={disabled}
+        onChange={() => onChange(value)}
+      />
+      <span className="network-option-name">{name}</span>
+      <span className="network-option-standard">{standard}</span>
+      <span className="network-option-detail">{detail}</span>
+    </label>
+  );
+}
+
 /**
  * "Top up with USDT": when the panel opens, fetches this account's permanent TRC-20 deposit address
- * and shows it the way an exchange does — the network, the address as a QR code and as text with Copy
+ * and shows it the way an exchange does — the currency (always USDT), a network to choose, then for Tron the address as a QR code and as text with Copy
  * and Share, then what to send. Any amount sent there is credited automatically, with no amount,
  * intent, or poll. The wallet is asked only to sign in to the hub (a JWT via
  * `sdk.getAuthHeaders()`), not to sign a transaction, and only when the panel opens: the
@@ -210,6 +230,8 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
   // The BSC chain id while BNB Chain top-ups are on (the deposit answer's `bsc_chain_id`), else null.
   const [bscChainId, setBscChainId] = useState(null);
   const [fee, setFee] = useState(null);
+  // The network the person chose to pay on: 'tron' or 'bsc'.
+  const [network, setNetwork] = useState('tron');
   // What the wallet's prompt is for, while one is open.
   const [walletNote, setWalletNote] = useState('');
 
@@ -324,13 +346,16 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
     };
   }, [open, userProfile]);
 
+  // BNB Chain is offered when the service has it on. Paying there needs an Ethereum wallet, so a
+  // person signed in with TronLink sees it greyed out with the reason, rather than not at all.
+  const bscOffered = Boolean(bscChainId);
+  const bscReady = bscOffered && canAddNetwork(wallet);
+  const shown = network === 'bsc' && bscReady ? 'bsc' : 'tron';
+
   return (
     <div className="card deposit-ticket">
       <div className="deposit-head">
         <h3 className="card-title">Top up with USDT</h3>
-        <span className={`network-chip${IS_TESTNET ? ' network-chip--test' : ''}`}>
-          {IS_TESTNET ? 'Tron Nile testnet · TRC-20' : 'Tron · TRC-20'}
-        </span>
       </div>
 
       {loading && !address && <p className="deposit-hint">Loading your deposit address…</p>}
@@ -346,7 +371,47 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
         <div className="status-banner error">{error}</div>
       )}
 
-      {address && wallet?.kind === 'tron' && (
+      {address && (
+        // Currency and network are two separate choices: the currency is always USDT, the network is
+        // where it travels. Only the chosen network's ways to pay are shown below.
+        <div className="topup-choice">
+          <div className="topup-currency">
+            <span className="label">Currency</span>
+            <span className="currency-chip">USDT</span>
+            <span className="deposit-hint">credited as CLT</span>
+          </div>
+          <fieldset className="network-picker">
+            <legend className="label">Network</legend>
+            <NetworkOption
+              value="tron"
+              checked={shown === 'tron'}
+              onChange={setNetwork}
+              name={IS_TESTNET ? 'Tron Nile testnet' : 'Tron'}
+              standard="TRC-20"
+              detail={wallet?.kind === 'tron' ? 'From TronLink or any wallet' : 'From any wallet or exchange'}
+            />
+            {bscOffered && (
+              <NetworkOption
+                value="bsc"
+                checked={shown === 'bsc'}
+                onChange={setNetwork}
+                disabled={!bscReady}
+                name={bscChainId === 97 ? 'BNB Chain testnet' : 'BNB Chain'}
+                standard="BEP-20"
+                detail={bscReady ? 'From this wallet only' : 'Needs MetaMask or another Ethereum wallet'}
+              />
+            )}
+          </fieldset>
+        </div>
+      )}
+
+      {address && shown === 'bsc' && (
+        // Signed in with an Ethereum wallet: paying USDT on BNB Chain from it costs cents and needs no
+        // deposit address.
+        <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscChainId === 97} />
+      )}
+
+      {address && shown === 'tron' && wallet?.kind === 'tron' && (
         // Signed in with TronLink: paying from it skips the deposit address and its relay fee. The
         // address below still works, for paying from anywhere else.
         <>
@@ -355,16 +420,7 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
         </>
       )}
 
-      {address && bscChainId && canAddNetwork(wallet) && (
-        // Signed in with an Ethereum wallet: paying USDT on BNB Chain from it costs cents and needs no
-        // deposit address. The TRON address below still works.
-        <>
-          <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscChainId === 97} />
-          <h4 className="r-title">Or send USDT on Tron to your deposit address</h4>
-        </>
-      )}
-
-      {address && (
+      {address && shown === 'tron' && (
         <>
           <div className="deposit-main">
             <div className="qr-tile">

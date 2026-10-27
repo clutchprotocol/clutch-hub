@@ -39,7 +39,7 @@ const BscTopUp = ({ wallet, userProfile, testnet }) => {
 
       const res = await fetch(`${ORCHESTRATOR_BASE_URL}/api/v1/bsc-topups`, { method: 'POST', headers: authHeaders });
       const body = await readJsonBody(res);
-      if (res.status === 503) throw new Error('Paying on BNB Chain is not available right now. Use the address below.');
+      if (res.status === 503) throw new Error('Paying on BNB Chain is not available right now. Choose Tron above to use your deposit address.');
       if (!res.ok) throw new Error(body.error || refusalMessage(res.status, `request failed (${res.status})`));
       const plan = bscPlan(body);
       if (!plan) throw new Error('The service did not say where to pay. Nothing was sent.');
@@ -76,7 +76,7 @@ const BscTopUp = ({ wallet, userProfile, testnet }) => {
 
   return (
     <div className="direct-topup">
-      <h4 className="r-title">Pay with BNB Chain (BEP-20)</h4>
+      <h4 className="r-title">Pay from this wallet</h4>
       <p className="deposit-hint">
         Send USDT on {network} straight from this wallet. No Clutch network fee: your wallet charges BNB Chain&apos;s own
         fee in BNB, usually a few cents, so keep a little BNB there.
