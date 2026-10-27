@@ -36,7 +36,7 @@
 }
 
 /* ===== Top up — see components/DepositPanel.jsx =====
-   Laid out like an exchange's deposit page: the network first, then the QR code beside the address
+   Laid out like an exchange's deposit page: the currency and the network first, then the QR code beside the address
    with Copy and Share, then the one warning that matters, then the terms as receipt lines. */
 .deposit-ticket {
   display: grid;
@@ -59,31 +59,108 @@
   margin: 0;
 }
 
-/* Which chain the address is on. The dot is green on the live network and yellow on a test network,
-   like the "Test network" tag in the panel header. */
-.network-chip {
-  display: inline-flex;
+/* Currency, then network: two separate choices (DepositPanel). The currency is fixed (USDT); the
+   network is a radio group drawn as two cards, and only the chosen network's ways to pay follow. */
+.topup-choice {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.topup-currency {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  gap: 0.4rem 0.6rem;
+}
+
+.topup-currency .label {
+  margin: 0;
+  min-width: 4.5rem;
+}
+
+.currency-chip {
+  padding: 0.2rem 0.7rem;
   border: 2px solid var(--asphalt);
   border-radius: var(--radius-full);
   background: var(--paper);
-  font-size: 0.95rem;
+  font-family: var(--font-receipt);
   font-weight: 600;
 }
 
-.network-chip::before {
-  content: '';
-  width: 0.7rem;
-  height: 0.7rem;
-  border: 2px solid var(--asphalt);
-  border-radius: 50%;
-  background: var(--sign);
+.network-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 
-.network-chip--test::before {
-  background: var(--lane);
+.network-picker legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+
+.network-option {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  padding: 0.65rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.network-option:hover {
+  border-color: var(--asphalt);
+}
+
+/* The radio itself is hidden; the card is what is pressed. It stays focusable for the keyboard. */
+.network-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.network-option:has(input:focus-visible) {
+  outline: 3px solid var(--lane);
+  outline-offset: 2px;
+}
+
+.network-option.is-checked {
+  border-color: var(--sign);
+  background: var(--concrete-2);
+  box-shadow: inset 4px 0 0 var(--sign);
+}
+
+.network-option.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.network-option.is-disabled:hover {
+  border-color: var(--line);
+}
+
+.network-option-name {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.network-option-standard {
+  font-family: var(--font-receipt);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.network-option-detail {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .deposit-main {
