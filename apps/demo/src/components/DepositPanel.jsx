@@ -192,6 +192,25 @@ const TestnetFaucetGuide = () => (
   </details>
 );
 
+/** The address as a QR code and as text, with Copy and Share: the same block for each network. */
+function AddressBlock({ address, hint }) {
+  return (
+    <div className="deposit-main">
+      <div className="qr-tile">
+        <QrCode value={address} label="QR code of your deposit address" />
+      </div>
+      <div className="deposit-side">
+        <p className="deposit-hint">{hint}</p>
+        <CopyableValue value={address} className="deposit-address" />
+        <div className="deposit-actions">
+          <CopyButton value={address} />
+          <ShareButton value={address} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** One choice in the network picker: a radio button drawn as a card, with the network's name, its
  * token standard and who can pay on it. */
 function NetworkOption({ value, checked, onChange, disabled, name, standard, detail }) {
@@ -229,6 +248,8 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
   const [terms, setTerms] = useState(null);
   // The BSC chain id while BNB Chain top-ups are on (the deposit answer's `bsc_chain_id`), else null.
   const [bscChainId, setBscChainId] = useState(null);
+  // This account's own BNB Chain deposit address (`bsc_address`), when the service gives one.
+  const [bscAddress, setBscAddress] = useState(null);
   const [fee, setFee] = useState(null);
   // The network the person chose to pay on: 'tron' or 'bsc'.
   const [network, setNetwork] = useState('tron');
@@ -311,6 +332,7 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
           setTerms(depositTerms(body));
           setFee(serviceFee(body));
           setBscChainId(Number(body.bsc_chain_id) || null);
+          setBscAddress(typeof body.bsc_address === 'string' && body.bsc_address ? body.bsc_address : null);
         }
 
         // Best-effort: only bother once we know deposits are actually on (the POST above didn't
@@ -346,10 +368,13 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
     };
   }, [open, userProfile]);
 
-  // BNB Chain is offered when the service has it on. Paying there needs an Ethereum wallet, so a
-  // person signed in with TronLink sees it greyed out with the reason, rather than not at all.
+  // BNB Chain is offered when the service has it on. With an address of their own anyone can pay
+  // there, from any wallet or exchange. Without one, paying needs an Ethereum wallet, so a person
+  // signed in with TronLink sees it greyed out with the reason, rather than not at all.
   const bscOffered = Boolean(bscChainId);
-  const bscReady = bscOffered && canAddNetwork(wallet);
+  const canPayFromWallet = bscOffered && canAddNetwork(wallet);
+  const bscReady = bscOffered && (Boolean(bscAddress) || canPayFromWallet);
+  const bscTestnet = bscChainId === 97;
   const shown = network === 'bsc' && bscReady ? 'bsc' : 'tron';
 
   return (
@@ -396,19 +421,76 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
                 checked={shown === 'bsc'}
                 onChange={setNetwork}
                 disabled={!bscReady}
-                name={bscChainId === 97 ? 'BNB Chain testnet' : 'BNB Chain'}
+                name={bscTestnet ? 'BNB Chain testnet' : 'BNB Chain'}
                 standard="BEP-20"
-                detail={bscReady ? 'From this wallet only' : 'Needs MetaMask or another Ethereum wallet'}
+                detail={
+                  bscAddress
+                    ? 'From any wallet or exchange'
+                    : bscReady
+                      ? 'From this wallet only'
+                      : 'Needs MetaMask or another Ethereum wallet'
+                }
               />
             )}
           </fieldset>
         </div>
       )}
 
-      {address && shown === 'bsc' && (
+      {address && shown === 'bsc' && bscAddress && (
+        // This account's own BNB Chain address, like the Tron one: whatever arrives there, from
+        // anywhere, is credited. The treasury moves it on and pays that network fee itself.
+        <>
+          <AddressBlock
+            address={bscAddress}
+            hint="Your permanent BNB Chain deposit address. Scan the code with a wallet app, or copy the address."
+          />
+
+          <div className="status-banner warning" role="note">
+            {bscTestnet ? (
+              <>
+                <strong>Send only BSC testnet USDT (BEP-20).</strong> Real USDT, BNB or any other token sent
+                here is not credited.
+              </>
+            ) : (
+              <>
+                <strong>Send only USDT on BNB Smart Chain (BEP-20).</strong> Any other token or network sent
+                here is not credited.
+              </>
+            )}
+          </div>
+
+          <div className="deposit-rows">
+            <Row label="Amount">Any amount{terms ? `, at least ${terms.minimum} USDT` : ''}</Row>
+            <Row label="Network fee">None from Clutch</Row>
+            <Row label="Credited as">CLT</Row>
+            {fee && (
+              <Row label="Service fee">
+                {fee.waived
+                  ? `None on your first top-up, then ${fee.percent} (at least ${fee.minimum} USDT)`
+                  : `${fee.percent} of what is credited, at least ${fee.minimum} USDT`}
+              </Row>
+            )}
+          </div>
+          <p className="r-note">
+            Sending from an exchange? Choose BNB Smart Chain (BEP20) as the network there. Withdrawals are paid in
+            USDT on Tron.
+          </p>
+
+          {canPayFromWallet && (
+            <details className="deposit-guide">
+              <summary>Or pay from this wallet</summary>
+              <div className="deposit-guide-body">
+                <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscTestnet} />
+              </div>
+            </details>
+          )}
+        </>
+      )}
+
+      {address && shown === 'bsc' && !bscAddress && (
         // Signed in with an Ethereum wallet: paying USDT on BNB Chain from it costs cents and needs no
         // deposit address.
-        <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscChainId === 97} />
+        <BscTopUp wallet={wallet} userProfile={userProfile} testnet={bscTestnet} />
       )}
 
       {address && shown === 'tron' && wallet?.kind === 'tron' && (
@@ -422,21 +504,10 @@ const DepositPanel = ({ userProfile, open, wallet }) => {
 
       {address && shown === 'tron' && (
         <>
-          <div className="deposit-main">
-            <div className="qr-tile">
-              <QrCode value={address} label="QR code of your deposit address" />
-            </div>
-            <div className="deposit-side">
-              <p className="deposit-hint">
-                Your permanent deposit address. Scan the code with a wallet app, or copy the address.
-              </p>
-              <CopyableValue value={address} className="deposit-address" />
-              <div className="deposit-actions">
-                <CopyButton value={address} />
-                <ShareButton value={address} />
-              </div>
-            </div>
-          </div>
+          <AddressBlock
+            address={address}
+            hint="Your permanent deposit address. Scan the code with a wallet app, or copy the address."
+          />
 
           <div className="status-banner warning" role="note">
             {IS_TESTNET ? (
