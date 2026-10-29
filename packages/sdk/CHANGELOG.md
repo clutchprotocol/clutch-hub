@@ -1,3 +1,10 @@
+## [4.5.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.3...v4.5.0) (2026-10-29)
+
+
+### Features
+
+* approve once, then sign ride transactions with a session key ([87be872](https://github.com/clutchprotocol/clutch-hub/commit/87be872d7b134403b26510d1458ebf980528c04d)), closes [#28](https://github.com/clutchprotocol/clutch-hub/issues/28)
+
 ## [4.4.3](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.2...v4.4.3) (2026-10-08)
 
 
