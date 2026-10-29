@@ -1,3 +1,10 @@
+## [4.5.1](https://github.com/clutchprotocol/clutch-hub/compare/v4.5.0...v4.5.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **sdk:** send the session key as text, not bytes ([ccdbd57](https://github.com/clutchprotocol/clutch-hub/commit/ccdbd57c608845bc9f7fa3ee5d0623140faca3be))
+
 ## [4.5.0](https://github.com/clutchprotocol/clutch-hub/compare/v4.4.3...v4.5.0) (2026-10-29)
 
 
