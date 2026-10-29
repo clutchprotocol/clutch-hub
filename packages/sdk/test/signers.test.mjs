@@ -894,3 +894,20 @@ test('a session signer signs rides with the session key and everything else with
   }
   assert.equal(signer.address, wallet.address);
 });
+
+test('a SessionKey transaction carries the key as text, which is how the node reads it', async () => {
+  const { generateSessionKey } = await import('../dist/index.js');
+  const k = generateSessionKey();
+  const sdk = new ClutchHubSdk('http://x', k.address, undefined, 2077);
+  const unsigned = {
+    from: k.address,
+    nonce: 3,
+    chain_id: 2077,
+    data: { function_call_type: 'SessionKey', arguments: { session_key: k.address, expires_at_block: '12345' } },
+  };
+  const signed = await sdk.signTransaction(unsigned, '11'.repeat(32), { type: 'SessionKey', sessionKey: k.address });
+  const decoded = rlp.decode(Buffer.from(signed.rawTransaction.slice(2), 'hex'));
+  const [tag, [key]] = decoded[7];
+  assert.equal(Buffer.from(tag).readUInt8(0) ?? 0, 11);
+  assert.equal(Buffer.from(key).toString('utf8'), k.address.slice(2));
+});

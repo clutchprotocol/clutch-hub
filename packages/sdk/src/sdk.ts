@@ -1244,7 +1244,8 @@ export class ClutchHubSdk {
         const argsData = data.arguments || data;
         const key = argsData.session_key ?? argsData.sessionKey ?? '';
         const expires = BigInt(argsData.expires_at_block ?? argsData.expiresAtBlock ?? 0);
-        return [11, [String(key).toLowerCase(), expires]];
+        // No `0x`: the rlp library reads a `0x...` string as bytes, and the node reads a string.
+        return [11, [stripHexPrefix(String(key)).toLowerCase(), expires]];
       }
       default:
         throw new Error(`Unsupported FunctionCall type: ${type}`);
