@@ -13,6 +13,8 @@ import UpdatePrompt from './components/UpdatePrompt';
 import EnvTag from './components/EnvTag';
 import AddToWalletButton from './components/AddToWalletButton';
 import AddToWalletPrompt from './components/AddToWalletPrompt';
+import SessionKeyButton from './components/SessionKeyButton';
+import { useSessionKey } from './hooks/useSessionKey';
 import { useWalletConnection } from './hooks/useWalletConnection';
 import { removeLegacyKeys } from './utils/walletSession';
 import { truncAddr } from './utils/address';
@@ -48,7 +50,9 @@ function App() {
   // The app holds no key. `userProfile` is the connected wallet's address and a signer that asks
   // the wallet (see hooks/useWalletConnection.js).
   const connection = useWalletConnection();
-  const userProfile = connection.profile;
+  // After "approve once" the profile's signer signs rides with a session key, no prompt.
+  const sessionKey = useSessionKey(connection.profile);
+  const userProfile = sessionKey.profile;
   const [menuOpen, setMenuOpen] = useState(false);
   const [passengerViewTab, setPassengerViewTab] = useState(null);
   const [driverViewTab, setDriverViewTab] = useState(null);
@@ -390,6 +394,7 @@ function App() {
                 {/* Puts the Clutch network in MetaMask or Trust Wallet, so the wallet shows the
                     balance. Draws nothing for TronLink. */}
                 {userProfile.publicKey && <AddToWalletButton wallet={connection.wallet} />}
+                {userProfile.publicKey && <SessionKeyButton session={sessionKey} />}
                 {EXPLORER_URL && (
                   <button
                     type="button"

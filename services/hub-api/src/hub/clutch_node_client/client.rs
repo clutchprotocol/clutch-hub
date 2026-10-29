@@ -23,6 +23,9 @@ pub struct ChainInfo {
     #[serde(deserialize_with = "deserialize_total_supply")]
     pub total_supply: u64,
     pub mint_authority: String,
+    /// The node's head. Absent from an old node's answer, which reads as 0.
+    #[serde(default)]
+    pub latest_block_index: u64,
 }
 
 fn deserialize_total_supply<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u64, D::Error> {

@@ -37,6 +37,13 @@ export interface RideRequestCancelArgs {
   rideRequestTxHash: string;
 }
 
+export interface SessionKeyArgs {
+  /** The address of the key that may sign ride transactions. */
+  sessionKey: string;
+  /** How many blocks it stays valid (about 20 s each on mainnet). 0 revokes. */
+  validForBlocks: number;
+}
+
 export interface BurnArgs {
   /** CLT base units to burn. */
   amount: bigint;

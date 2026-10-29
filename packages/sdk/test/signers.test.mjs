@@ -876,3 +876,21 @@ test('the shared socket never asks TronLink to sign in the background', async ()
   assert.deepEqual(await sdk.wsConnectionParams(), {});
   assert.equal(tron.signed.length, 0);
 });
+
+test('a session signer signs rides with the session key and everything else with the wallet', async () => {
+  const { createSessionKeySigner, generateSessionKey, createLocalSigner } = await import('../dist/index.js');
+  const wallet = createLocalSigner('11'.repeat(32));
+  const session = generateSessionKey();
+  const signer = createSessionKeySigner(wallet, session.privateKey);
+  const hashHex = 'ab'.repeat(32);
+
+  const ride = await signer.signTransaction({ hashHex, chainId: 1, functionCallType: 'RideRequest' });
+  const viaSession = await createLocalSigner(session.privateKey).signTransaction({ hashHex, chainId: 1 });
+  assert.deepEqual(ride, viaSession);
+
+  for (const type of ['Burn', 'SessionKey', undefined]) {
+    const sig = await signer.signTransaction({ hashHex, chainId: 1, functionCallType: type });
+    assert.deepEqual(sig, await wallet.signTransaction({ hashHex, chainId: 1 }));
+  }
+  assert.equal(signer.address, wallet.address);
+});
