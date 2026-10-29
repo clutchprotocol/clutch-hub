@@ -34,6 +34,8 @@ export interface TransactionSigningRequest {
   hashHex: string;
   /** The chain the transaction is for. A wallet's prompt names it. */
   chainId: number;
+  /** The transaction type (`RideRequest`, `Burn`, ...). A session signer uses it to decide who signs. */
+  functionCallType?: string;
 }
 
 /** What a signer is asked to sign to prove it owns a key to the Hub API. */
@@ -476,5 +478,36 @@ export function watchWalletAccounts(wallet: InjectedWallet, listener: (account: 
   provider.on('accountsChanged', onAccountsChanged);
   return () => {
     provider.removeListener?.('accountsChanged', onAccountsChanged);
+  };
+}
+
+/** The transaction types a session key may sign. The node enforces the same list. */
+export const SESSION_KEY_TYPES: readonly string[] = [
+  'RideRequest',
+  'RideOffer',
+  'RideAcceptance',
+  'RidePay',
+  'RideCancel',
+  'RideRequestCancel',
+];
+
+/**
+ * A signer that signs ride transactions with a session key held in memory and leaves everything
+ * else (login, withdrawals, the authorization itself) to `wallet`. The node accepts the session
+ * key's signature only after the wallet authorized it and only for the ride types, so a leaked
+ * session key cannot move money out. `signHash` signs a hash string with the session key.
+ */
+export function createSessionSigner(
+  wallet: Signer,
+  signHash: (hashHex: string) => Promise<Signature>
+): Signer {
+  return {
+    address: wallet.address,
+    interactive: wallet.interactive,
+    signAuthChallenge: (request) => wallet.signAuthChallenge(request),
+    signTransaction: (request) =>
+      request.functionCallType && SESSION_KEY_TYPES.includes(request.functionCallType)
+        ? signHash(request.hashHex)
+        : wallet.signTransaction(request),
   };
 }

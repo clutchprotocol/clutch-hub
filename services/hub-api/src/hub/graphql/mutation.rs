@@ -423,6 +423,61 @@ impl Mutation {
         Ok(Json(params))
     }
 
+    /// Authorizes `session_key` to sign the caller's ride transactions for the next
+    /// `valid_for_blocks` blocks (the node counts blocks; the app turns hours into blocks).
+    /// The caller signs this with the wallet; it is the one prompt. `valid_for_blocks = 0`
+    /// revokes the key.
+    #[graphql(guard = "AuthGuard")]
+    pub async fn create_unsigned_session_key(
+        &self,
+        ctx: &Context<'_>,
+        session_key: String,
+        valid_for_blocks: u64,
+    ) -> async_graphql::Result<Json<serde_json::Value>> {
+        let auth_user = get_auth_user(ctx)
+            .ok_or_else(|| async_graphql::Error::new("User not authenticated"))?;
+        let chain_id = require_chain_id(ctx)?;
+
+        let client = ctx
+            .data::<Arc<ClutchNodeClient>>()
+            .map_err(|_| async_graphql::Error::new("WebSocket manager not found"))?
+            .clone();
+
+        let nonce = client
+            .get_next_nonce(&auth_user.public_key)
+            .await
+            .map_err(|e| async_graphql::Error::new(format!("Failed to get nonce: {}", e)))?;
+
+        let expires_at_block = if valid_for_blocks == 0 {
+            0
+        } else {
+            let head = client
+                .get_chain_info()
+                .await
+                .map_err(async_graphql::Error::new)?
+                .latest_block_index;
+            head.saturating_add(valid_for_blocks)
+        };
+
+        info!(
+            "Processing session key for user {} until block {}",
+            auth_user.public_key, expires_at_block
+        );
+
+        Ok(Json(json!({
+            "from": auth_user.public_key,
+            "nonce": nonce,
+            "chain_id": chain_id,
+            "data": {
+                "function_call_type": "SessionKey",
+                "arguments": {
+                    "session_key": session_key,
+                    "expires_at_block": expires_at_block.to_string()
+                }
+            }
+        })))
+    }
+
     #[graphql(guard = "AuthGuard")]
     pub async fn send_raw_transaction(
         &self,
@@ -494,6 +549,7 @@ mod tests {
             tx_fee: 1_000,
             total_supply: 0,
             mint_authority: "0x0000000000000000000000000000000000000000".into(),
+            latest_block_index: 0,
         })
     }
 

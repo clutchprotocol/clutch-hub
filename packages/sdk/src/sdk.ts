@@ -20,6 +20,7 @@ import {
   AvailableCompletedTrip,
   AvailableRecentTrip,
   BurnArgs,
+  SessionKeyArgs,
   MapBounds,
   RideRequestArgs,
   RideOfferArgs,
@@ -29,7 +30,7 @@ import {
   RideRequestCancelArgs,
   Signature,
 } from './types.js';
-import type { Signer } from './signers.js';
+import { createSessionSigner, type Signer } from './signers.js';
 
 /** Strip 0x/0X prefix - hex parsers (e.g. @noble/secp256k1) do not accept it. Exported for consumers. */
 export function stripHexPrefix(hex: string): string {
@@ -203,6 +204,21 @@ export function createLocalSigner(privateKey: string): Signer {
   };
 }
 
+/** A fresh random key for a session: its private key (64 hex) and its address. */
+export function generateSessionKey(): { privateKey: string; address: string } {
+  const privateKey = Buffer.from(secp.utils.randomPrivateKey()).toString('hex');
+  return { privateKey, address: addressFromPrivateKey(privateKey) };
+}
+
+/**
+ * The signer to use after the wallet authorized `sessionPrivateKey` (a SessionKey transaction):
+ * rides are signed with the session key without a prompt, everything else still asks `wallet`.
+ */
+export function createSessionKeySigner(wallet: Signer, sessionPrivateKey: string): Signer {
+  const local = createLocalSigner(sessionPrivateKey);
+  return createSessionSigner(wallet, (hashHex) => local.signTransaction({ hashHex, chainId: 0 }));
+}
+
 /** Everywhere the SDK takes a private key it also takes a signer. */
 function toSigner(keyOrSigner: string | Signer): Signer {
   return typeof keyOrSigner === 'string' ? createLocalSigner(keyOrSigner) : keyOrSigner;
@@ -322,13 +338,15 @@ export interface UnsignedTransaction {
  * check the hub's answer instead of signing it blind.
  */
 export interface ExpectedTx {
-  type: 'RideRequest' | 'RideOffer' | 'RidePay' | 'RideAcceptance' | 'RideCancel' | 'RideRequestCancel' | 'Burn';
+  type: 'RideRequest' | 'RideOffer' | 'RidePay' | 'RideAcceptance' | 'RideCancel' | 'RideRequestCancel' | 'Burn' | 'SessionKey';
   /** The wallet's own address/pk form; `signTransaction` fills this in automatically. */
   from?: string;
   /** Pinned CLIENT-side (app config, e.g. 2077) — never sourced from the hub's own `chainInfo`. */
   chainId?: number;
   /** RideRequest/RideOffer/RidePay. */
   fare?: bigint;
+  /** SessionKey: the key the caller asked to authorize. The hub cannot be trusted to name it. */
+  sessionKey?: string;
   /** Burn. */
   amount?: bigint;
   /** The acceptance/offer/request hash the caller itself passed in. */
@@ -436,6 +454,13 @@ export function verifyUnsignedTransaction(
     const actualRef = refHashFromArgs(expected.type, argsData);
     if (actualRef === undefined || normalizeTxHashForRlp(String(actualRef)) !== normalizeTxHashForRlp(expected.refTxHash)) {
       fail('refTxHash');
+    }
+  }
+
+  if (expected.sessionKey !== undefined) {
+    const actual = readArg(argsData, 'session_key', 'sessionKey');
+    if (typeof actual !== 'string' || stripHexPrefix(actual).toLowerCase() !== stripHexPrefix(expected.sessionKey).toLowerCase()) {
+      fail('sessionKey');
     }
   }
 
@@ -745,6 +770,19 @@ export class ClutchHubSdk {
   }
 
   /**
+   * Fetches an unsigned SessionKey transaction: lets `sessionKey` sign this account's ride
+   * transactions for the next `validForBlocks` blocks. 0 revokes. Sign it with the wallet and
+   * check it with `expected: { type: 'SessionKey', sessionKey }`, because the hub picks the
+   * block height and must not be trusted to name the key.
+   */
+  public async createUnsignedSessionKey(args: SessionKeyArgs): Promise<UnsignedTransaction> {
+    return this.createUnsigned('createUnsignedSessionKey', {
+      sessionKey: ['String!', args.sessionKey],
+      validForBlocks: ['Int!', args.validForBlocks],
+    });
+  }
+
+  /**
    * Fetches an unsigned Burn transaction. Burns `amount` CLT from the caller's balance,
    * optionally tagged with a treasury `redemptionRef` (hex(keccak256(intent_id))).
    */
@@ -833,6 +871,7 @@ export class ClutchHubSdk {
     const signature = await toSigner(privateKey).signTransaction({
       hashHex: rawHashHex,
       chainId: unsignedTx.chain_id,
+      functionCallType: String(unsignedTx.data?.function_call_type ?? unsignedTx.data?.type ?? ''),
     });
     const rNo0x = stripHexPrefix(signature.r);
     const sNo0x = stripHexPrefix(signature.s);
@@ -1200,6 +1239,12 @@ export class ClutchHubSdk {
         const refRaw = argsData.redemption_ref ?? argsData.redemptionRef;
         const refForRlp = refRaw != null && String(refRaw).length > 0 ? String(refRaw) : '';
         return [7, [amount, refForRlp]];
+      }
+      case 'SessionKey': {
+        const argsData = data.arguments || data;
+        const key = argsData.session_key ?? argsData.sessionKey ?? '';
+        const expires = BigInt(argsData.expires_at_block ?? argsData.expiresAtBlock ?? 0);
+        return [11, [String(key).toLowerCase(), expires]];
       }
       default:
         throw new Error(`Unsupported FunctionCall type: ${type}`);
